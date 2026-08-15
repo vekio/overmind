@@ -8,14 +8,14 @@ import (
 	"reflect"
 	"testing"
 
-	"git.casta.me/alberto/overmind/internal/ports/blobstore"
+	"git.casta.me/alberto/overmind/internal/ports"
 )
 
 func TestStoreCreateGetListDelete(t *testing.T) {
 	ctx := context.Background()
 	store := New(t.TempDir())
 
-	blob := blobstore.Blob{
+	blob := ports.Blob{
 		Path:    "notes/first.adoc",
 		Content: []byte("= First\n"),
 	}
@@ -34,7 +34,7 @@ func TestStoreCreateGetListDelete(t *testing.T) {
 		t.Fatalf("Get() Content = %q, want %q", got.Content, blob.Content)
 	}
 
-	paths, err := store.List(ctx, blobstore.Filter{})
+	paths, err := store.List(ctx, ports.BlobFilter{})
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -45,8 +45,8 @@ func TestStoreCreateGetListDelete(t *testing.T) {
 	if err := store.Delete(ctx, blob.Path); err != nil {
 		t.Fatalf("Delete() error = %v", err)
 	}
-	if _, err := store.Get(ctx, blob.Path); !errors.Is(err, blobstore.ErrNotFound) {
-		t.Fatalf("Get() error = %v, want %v", err, blobstore.ErrNotFound)
+	if _, err := store.Get(ctx, blob.Path); !errors.Is(err, ports.ErrBlobNotFound) {
+		t.Fatalf("Get() error = %v, want %v", err, ports.ErrBlobNotFound)
 	}
 }
 
@@ -54,13 +54,13 @@ func TestStoreCreateFailsWhenBlobAlreadyExists(t *testing.T) {
 	ctx := context.Background()
 	store := New(t.TempDir())
 
-	blob := blobstore.Blob{Path: "note.adoc", Content: []byte("old")}
+	blob := ports.Blob{Path: "note.adoc", Content: []byte("old")}
 	if err := store.Create(ctx, blob); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	if err := store.Create(ctx, blobstore.Blob{Path: "note.adoc", Content: []byte("new")}); !errors.Is(err, blobstore.ErrAlreadyExists) {
-		t.Fatalf("Create() error = %v, want %v", err, blobstore.ErrAlreadyExists)
+	if err := store.Create(ctx, ports.Blob{Path: "note.adoc", Content: []byte("new")}); !errors.Is(err, ports.ErrBlobAlreadyExists) {
+		t.Fatalf("Create() error = %v, want %v", err, ports.ErrBlobAlreadyExists)
 	}
 }
 
@@ -68,10 +68,10 @@ func TestStorePutReplacesExistingBlob(t *testing.T) {
 	ctx := context.Background()
 	store := New(t.TempDir())
 
-	if err := store.Put(ctx, blobstore.Blob{Path: "note.adoc", Content: []byte("old")}); err != nil {
+	if err := store.Put(ctx, ports.Blob{Path: "note.adoc", Content: []byte("old")}); err != nil {
 		t.Fatalf("Put(old) error = %v", err)
 	}
-	if err := store.Put(ctx, blobstore.Blob{Path: "note.adoc", Content: []byte("new")}); err != nil {
+	if err := store.Put(ctx, ports.Blob{Path: "note.adoc", Content: []byte("new")}); err != nil {
 		t.Fatalf("Put(new) error = %v", err)
 	}
 
@@ -88,7 +88,7 @@ func TestStoreAllowsEmptyBlobContent(t *testing.T) {
 	ctx := context.Background()
 	store := New(t.TempDir())
 
-	if err := store.Create(ctx, blobstore.Blob{Path: "empty.adoc"}); err != nil {
+	if err := store.Create(ctx, ports.Blob{Path: "empty.adoc"}); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
 
@@ -113,9 +113,9 @@ func TestStoreRejectsInvalidBlobPaths(t *testing.T) {
 		`notes\windows.adoc`,
 	} {
 		t.Run(blobPath, func(t *testing.T) {
-			err := store.Put(ctx, blobstore.Blob{Path: blobPath, Content: []byte("content")})
-			if !errors.Is(err, blobstore.ErrInvalidPath) {
-				t.Fatalf("Put() error = %v, want %v", err, blobstore.ErrInvalidPath)
+			err := store.Put(ctx, ports.Blob{Path: blobPath, Content: []byte("content")})
+			if !errors.Is(err, ports.ErrInvalidBlobPath) {
+				t.Fatalf("Put() error = %v, want %v", err, ports.ErrInvalidBlobPath)
 			}
 		})
 	}
@@ -138,7 +138,7 @@ func TestStoreDoesNotFollowSymlinksOutsideRoot(t *testing.T) {
 	if _, err := store.Get(ctx, "escape/outside.adoc"); err == nil {
 		t.Fatal("Get() error = nil, want root escape error")
 	}
-	if err := store.Put(ctx, blobstore.Blob{Path: "escape/outside.adoc", Content: []byte("changed")}); err == nil {
+	if err := store.Put(ctx, ports.Blob{Path: "escape/outside.adoc", Content: []byte("changed")}); err == nil {
 		t.Fatal("Put() error = nil, want root escape error")
 	}
 
@@ -150,7 +150,7 @@ func TestStoreDoesNotFollowSymlinksOutsideRoot(t *testing.T) {
 		t.Fatalf("outside content = %q, want %q", got, want)
 	}
 
-	paths, err := store.List(ctx, blobstore.Filter{})
+	paths, err := store.List(ctx, ports.BlobFilter{})
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -164,13 +164,13 @@ func TestStoreListIgnoresGitAndReturnsAllBlobPaths(t *testing.T) {
 	root := t.TempDir()
 	store := New(root)
 
-	if err := store.Put(ctx, blobstore.Blob{Path: "b.adoc", Content: []byte("b")}); err != nil {
+	if err := store.Put(ctx, ports.Blob{Path: "b.adoc", Content: []byte("b")}); err != nil {
 		t.Fatalf("Put(b) error = %v", err)
 	}
-	if err := store.Put(ctx, blobstore.Blob{Path: "a.adoc", Content: []byte("a")}); err != nil {
+	if err := store.Put(ctx, ports.Blob{Path: "a.adoc", Content: []byte("a")}); err != nil {
 		t.Fatalf("Put(a) error = %v", err)
 	}
-	if err := store.Put(ctx, blobstore.Blob{Path: "ignored.txt", Content: []byte("ignored")}); err != nil {
+	if err := store.Put(ctx, ports.Blob{Path: "ignored.txt", Content: []byte("ignored")}); err != nil {
 		t.Fatalf("Put(ignored) error = %v", err)
 	}
 	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
@@ -180,7 +180,7 @@ func TestStoreListIgnoresGitAndReturnsAllBlobPaths(t *testing.T) {
 		t.Fatalf("os.WriteFile(.git) error = %v", err)
 	}
 
-	paths, err := store.List(ctx, blobstore.Filter{})
+	paths, err := store.List(ctx, ports.BlobFilter{})
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
@@ -193,7 +193,7 @@ func TestStoreListFiltersByPrefixAndSuffix(t *testing.T) {
 	ctx := context.Background()
 	store := New(t.TempDir())
 
-	for _, blob := range []blobstore.Blob{
+	for _, blob := range []ports.Blob{
 		{Path: "notes/a.adoc", Content: []byte("a")},
 		{Path: "notes/b.txt", Content: []byte("b")},
 		{Path: "archive/c.adoc", Content: []byte("c")},
@@ -203,7 +203,7 @@ func TestStoreListFiltersByPrefixAndSuffix(t *testing.T) {
 		}
 	}
 
-	paths, err := store.List(ctx, blobstore.Filter{Prefix: "notes/", Suffix: ".adoc"})
+	paths, err := store.List(ctx, ports.BlobFilter{Prefix: "notes/", Suffix: ".adoc"})
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}

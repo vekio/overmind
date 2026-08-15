@@ -1,0 +1,176 @@
+= Client application guide
+
+This guide describes the recommended entry points an application should normally
+use. The lower-level lexer and parser packages remain public for tooling that
+needs them, but an application does not need to coordinate those packages
+manually.
+
+== Process a document
+
+Keep the original bytes when the application may edit the document, then call
+`asciidoc.Process`:
+
+[source,go]
+----
+source, err := os.ReadFile(path)
+if err != nil {
+    return err
+}
+
+result := asciidoc.Process(source)
+for _, item := range result.Diagnostics {
+    log.Println(item)
+}
+if result.HasErrors() {
+    return errors.New("invalid AsciiDoc document")
+}
+
+document := result.Document
+analysis := result.Analysis
+----
+
+Warnings occur in `Diagnostics` but do not make `HasErrors` return true. An
+application chooses whether a warning is acceptable for its workflow.
+`ParseDiagnostics` contains parser and input diagnostics only;
+`Analysis.Diagnostics` contains semantic diagnostics only.
+
+Processing functions return a result rather than an `error`. Reader failures,
+invalid syntax, and semantic failures are represented uniformly as diagnostics,
+allowing clients such as editors to keep using the partial AST.
+
+`ProcessReader` is appropriate when only streaming consumption is needed. An
+application that intends to edit should normally retain `source` and call
+`Process`, because all spans are byte offsets into those exact bytes.
+
+== Read effective header attributes
+
+Use `Lookup` when only the value is required:
+
+[source,go]
+----
+noteType, defined := analysis.Header.Attributes.Lookup("note-type")
+if defined && noteType == "youtube" {
+    videoURL, ok := analysis.Header.Attributes.Lookup("youtube-url")
+    if !ok {
+        return errors.New("youtube-url is required")
+    }
+    // Run the application's YouTube workflow.
+}
+----
+
+An empty declaration such as `:toc:` returns `"", true`; an absent or unset
+attribute returns `"", false`. `Get` returns the effective declaration and its
+source spans. `History` includes assignments and unsets in source order. `All`
+returns effective attributes in source order.
+
+Attribute names and meanings owned by the application, such as `note-type`,
+are not validated by the AsciiDoc library.
+
+== Locate AST nodes
+
+Blocks and inline values are interfaces. Use a type switch when processing
+several kinds, or `ast.Walk` when searching recursively:
+
+[source,go]
+----
+var destination *ast.Section
+ast.Walk(document, func(node ast.Node) bool {
+    section, ok := node.(*ast.Section)
+    if ok && section.Title == "Summary" {
+        destination = section
+        return false
+    }
+    return true
+})
+----
+
+`Walk` is depth-first and pre-order. Returning `false` skips that node's
+descendants, not its later siblings. Block metadata is not visited because it
+is not an `ast.Node`; access it through the owning block or section.
+
+== Use anchors and references
+
+Explicit anchors are indexed by exact ID:
+
+[source,go]
+----
+anchor, found := analysis.Anchors.Lookup("summary")
+if found {
+    fmt.Printf("%s belongs to %T\n", anchor.ID, anchor.Node)
+}
+----
+
+`All` returns the first declaration of every ID in source order. `History`
+returns every declaration of one ID. A duplicate is a semantic error and the
+first declaration remains the deterministic lookup result.
+
+`analysis.References` contains every cross-reference in source order. A local
+reference is `resolved` or `unresolved`; an obviously cross-document target is
+`external` and is not loaded. When resolved, `Reference.Anchor` points to the
+indexed semantic anchor and its owning AST node.
+
+== Make source-preserving changes
+
+The AST describes source; it is not a rendering model. Use its spans to create
+edits over the original bytes:
+
+[source,go]
+----
+change, err := edit.ReplaceSectionContent(source, destination, generated)
+if err != nil {
+    return err
+}
+updated, err := edit.Apply(source, []edit.TextEdit{change})
+if err != nil {
+    return err
+}
+----
+
+`ReplaceSectionContent` replaces the complete body, including nested sections,
+and normalizes generated content to the heading's line-ending convention. The
+decision that a section is safe to replace belongs to the application.
+Changing exported AST fields directly changes only the in-memory model; it does
+not update or render the original source.
+
+For other structures, create a `TextEdit` directly. For example,
+`Table.ContentSource` replaces table data while retaining its metadata and
+fences. `Apply` validates ranges, rejects overlaps, and returns new bytes
+without modifying its arguments.
+
+Every node and span derived from the old source becomes stale immediately after
+an edit. Always process the updated bytes before further AST operations:
+
+[source,go]
+----
+updatedResult := asciidoc.Process(updated)
+if updatedResult.HasErrors() {
+    return updatedResult.Diagnostics
+}
+----
+
+The client owns diff presentation, confirmation policy, backups, concurrent
+modification checks, and atomic filesystem replacement. The AsciiDoc library
+does not write files.
+
+== Choose the appropriate API level
+
+[cols="1,2"]
+|===
+|API |Use it when
+
+|`Process` / `ProcessReader`
+|The application needs both AST and semantic information.
+
+|`Parse` / `ParseReader`
+|The tool needs syntax only, such as a formatter or AST inspector.
+
+|`Analyze`
+|An AST already exists and semantic information must be recomputed.
+
+|`lexer.New`
+|The tool needs physical-line tokens rather than an AST.
+
+|`format.WriteJSON`
+|The tool needs the syntax parser result as JSON. Semantic analysis is not
+included in this JSON representation.
+|===

@@ -1,0 +1,319 @@
+= Comandos de desarrollo y calidad
+
+Este proyecto utiliza https://just.systems[`just`] para dar nombres cortos y
+consistentes a los comandos habituales de Go. Las recetas están declaradas en
+el fichero `justfile` de la raíz del repositorio.
+
+Para ver la lista disponible:
+
+[source,shell]
+----
+just
+----
+
+También puedes usar `just --list`. `just` no sustituye a Go: cada receta acaba
+ejecutando herramientas estándar como `go test`, `go vet` o `gofmt`.
+
+== Flujo recomendado
+
+Durante el desarrollo suele ser suficiente este ciclo:
+
+[source,shell]
+----
+just fmt
+just test
+----
+
+Antes de considerar terminado un cambio:
+
+[source,shell]
+----
+just check
+----
+
+De forma puntual, especialmente después de modificar concurrencia, el scanner
+o el manejo de bytes:
+
+[source,shell]
+----
+just test-race
+just fuzz 30s
+just coverage
+----
+
+`check` se mantiene rápido y determinista. El detector de carreras y el
+fuzzing activo se ejecutan aparte porque consumen más tiempo y recursos.
+
+== Calidad
+
+=== `just test`
+
+Ejecuta:
+
+[source,shell]
+----
+go test ./...
+----
+
+Compila todos los paquetes y ejecuta sus tests unitarios, tests de integración,
+ejemplos verificables y los casos semilla de los fuzz tests.
+
+Un fuzz test tiene una función parecida a esta:
+
+[source,go]
+----
+func FuzzSomething(f *testing.F) {
+    f.Add("seed")
+    f.Fuzz(func(t *testing.T, value string) {
+        // Comprobar una propiedad para value.
+    })
+}
+----
+
+Con un `go test` normal, Go solo ejecuta las semillas añadidas con `f.Add` y
+los casos de regresión que se hayan guardado anteriormente. No empieza a
+inventar entradas nuevas. Por eso `just test` es rápido y reproducible.
+
+Ejecuta esta receta:
+
+* durante el desarrollo, después de cada cambio significativo;
+* después de arreglar un bug;
+* antes de crear un commit o subir cambios.
+
+=== `just fmt`
+
+Ejecuta `gofmt -w` sobre `cmd`, `internal` y `pkg`. `gofmt` aplica el formato
+canónico de Go y modifica los ficheros que no estén formateados.
+
+En Go no suele discutirse un estilo de espacios o indentación: `gofmt` decide
+el formato común para todos los proyectos.
+
+Ejecuta esta receta después de editar código Go y antes de revisar el diff.
+
+=== `just fmt-check`
+
+Comprueba el formato sin modificar ningún fichero. Si encuentra un fichero que
+necesita `gofmt`, muestra su ruta y termina con error.
+
+Es apropiado para comprobaciones automáticas y forma parte de `just check`.
+Si falla localmente, ejecuta `just fmt`.
+
+=== `just vet`
+
+Ejecuta:
+
+[source,shell]
+----
+go vet ./...
+----
+
+`go vet` analiza construcciones sospechosas que pueden compilar correctamente
+pero suelen indicar un error: llamadas a funciones de formato con argumentos
+incorrectos, copias problemáticas de ciertos valores, etiquetas estructurales
+inválidas y otros patrones conocidos por Go.
+
+No sustituye a los tests ni demuestra que el programa sea correcto. Es una
+capa de análisis estático adicional.
+
+=== `just check`
+
+Ejecuta, en este orden lógico, las comprobaciones de formato, `go vet` y todos
+los tests:
+
+[source,text]
+----
+fmt-check -> vet -> test
+----
+
+No modifica el código. Es el comando principal antes de entregar un cambio o
+abrir una pull request.
+
+=== `just test-race`
+
+Ejecuta todos los tests con `go test -race ./...`. El detector de carreras
+instrumenta el programa y avisa cuando varias goroutines acceden de forma
+insegura a la misma memoria y al menos una escritura está implicada.
+
+Una carrera puede producir bugs intermitentes difíciles de reproducir. El
+detector solo encuentra carreras que ocurren durante esa ejecución; no prueba
+todas las combinaciones posibles.
+
+Este comando consume más CPU y memoria que `just test`. Conviene ejecutarlo:
+
+* al añadir goroutines, canales, mutexes o cachés compartidas;
+* al cambiar código declarado como seguro para concurrencia;
+* periódicamente en integración continua.
+
+El scanner actual declara que no es seguro para uso concurrente, pero otros
+paquetes del proyecto pueden incorporar concurrencia en el futuro.
+
+=== `just coverage`
+
+Ejecuta los tests del lexer generando `coverage.out` y muestra la cobertura por
+función y el porcentaje total.
+
+La cobertura indica qué sentencias fueron ejecutadas por los tests. Una
+cobertura alta ayuda a detectar zonas sin probar, pero no garantiza que las
+aserciones sean buenas ni que se hayan cubierto todos los comportamientos.
+
+`coverage.out` está ignorado por Git. Para inspeccionarlo visualmente puedes
+usar directamente la herramienta de Go:
+
+[source,shell]
+----
+go tool cover -html=coverage.out
+----
+
+== Fuzzing
+
+El fuzzing ejecuta una función de test muchas veces con valores generados y
+mutados automáticamente. Go parte de un pequeño corpus de semillas, cambia sus
+bytes y conserva entradas nuevas cuando recorren caminos interesantes del
+código.
+
+Si encuentra un panic o una aserción que falla, intenta reducir la entrada al
+caso mínimo que sigue reproduciendo el problema. Normalmente guarda ese caso
+bajo `testdata/fuzz/<NombreDelFuzzTest>/`. Desde entonces, `just test` lo
+ejecutará como una regresión para evitar que vuelva el bug.
+
+El fuzzing no sabe qué debería significar cada construcción AsciiDoc. En lugar
+de comprobar ejemplos concretos, comprueba propiedades que siempre deben
+cumplirse. Los tests unitarios y los fixtures siguen siendo necesarios para
+verificar la clasificación semántica esperada.
+
+=== `just fuzz-scanner [duración]`
+
+Activa `FuzzScannerReconstructsSource`. Sin argumento se ejecuta durante diez
+segundos:
+
+[source,shell]
+----
+just fuzz-scanner
+just fuzz-scanner 1m
+----
+
+Genera secuencias arbitrarias de bytes, no solo texto UTF-8 válido, y verifica
+estas propiedades:
+
+* el scanner siempre termina alcanzando `LineEOF`;
+* no entra en un bucle infinito ni produce un panic;
+* nunca emite accidentalmente un token `LineInvalid`;
+* los offsets de los tokens son continuos;
+* concatenar `SourceText()` reconstruye exactamente la entrada original.
+
+Este test protege especialmente el manejo de líneas vacías, UTF-8 inválido,
+bytes cero, finales `LF`, `CRLF` y `CR`, combinaciones de finales diferentes y
+documentos sin terminador final.
+
+La propiedad esencial es:
+
+[source,text]
+----
+entrada original == concatenación de token.SourceText()
+----
+
+Esto es importante para futuros formateadores: tokenizar un documento no puede
+perder ni cambiar sus bytes.
+
+=== `just fuzz-match [duración]`
+
+Activa `FuzzMatchLinePreservesRaw`:
+
+[source,shell]
+----
+just fuzz-match
+just fuzz-match 30s
+----
+
+Genera líneas arbitrarias y comprueba que el clasificador:
+
+* nunca produce `LineEOF`, porque EOF solo pertenece al scanner;
+* nunca devuelve el valor inválido reservado `LineInvalid`;
+* conserva exactamente el contenido recibido en `LineToken.Raw`;
+* no entra en panic ante sintaxis incompleta, bytes extraños o combinaciones de
+  prefijos ambiguas.
+
+Este fuzz test protege la frontera entre los matchers. Por ejemplo, una entrada
+puede empezar como heading, delimitador, atributo o macro y estar truncada en
+cualquier posición. Aunque no coincida con ninguna regla, debe terminar como
+`LineText` sin perder información.
+
+=== `just fuzz [duración]`
+
+Ejecuta secuencialmente los dos fuzz targets anteriores. Go permite activar un
+solo fuzz target por invocación de `go test`, por eso la receta realiza dos
+ejecuciones.
+
+[source,shell]
+----
+just fuzz       # diez segundos por target
+just fuzz 2m    # dos minutos por target
+----
+
+Una duración mayor aumenta la oportunidad de descubrir combinaciones nuevas,
+pero nunca existe un momento en el que el espacio de entradas quede
+completamente agotado. Diez o treinta segundos son útiles durante el
+desarrollo; una tarea periódica de CI puede dedicar varios minutos.
+
+== Desarrollo y artefactos
+
+=== `just run [argumentos]`
+
+Ejecuta el CLI sin crear un binario permanente. Los argumentos escritos después
+de `--` se pasan a `overmind`:
+
+[source,shell]
+----
+just run -- asciidoc lexer examples/basic.adoc
+----
+
+Es la forma más rápida de probar manualmente el comportamiento del programa.
+
+=== `just build`
+
+Primero ejecuta `just check` y, si todo pasa, compila `./cmd/overmind` como
+`bin/overmind`. El directorio `bin/` está ignorado por Git.
+
+Utilízalo cuando necesites probar el binario exactamente como artefacto
+compilado.
+
+=== `just install`
+
+Primero ejecuta `just check` y después instala el comando mediante `go install`.
+El destino es `GOBIN` si está configurado o, en caso contrario, `GOPATH/bin`.
+
+Utilízalo cuando quieras invocar `overmind` desde cualquier directorio. La ruta
+de instalación debe formar parte de la variable `PATH` de tu shell.
+
+=== `just clean`
+
+Elimina el directorio local `bin/` creado por `just build`. No limpia la caché
+global de Go ni elimina `coverage.out`.
+
+== Qué comando elegir
+
+[cols="1,2"]
+|===
+|Situación |Comando recomendado
+
+|Acabas de editar código
+|`just fmt` y `just test`
+
+|Vas a entregar el cambio
+|`just check`
+
+|Has modificado concurrencia
+|`just test-race`
+
+|Has tocado el scanner o los matchers
+|`just fuzz 30s`
+
+|Quieres localizar código poco probado
+|`just coverage`
+
+|Quieres probar el CLI rápidamente
+|`just run -- asciidoc lexer examples/basic.adoc`
+
+|Quieres producir el ejecutable local
+|`just build`
+|===

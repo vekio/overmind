@@ -1,0 +1,11 @@
+[[components,Runtime components]]
+.Component inventory
+[cols="1,2",options="header"]
+|===
+|Name |Description
+
+|Lexer
+|Classifies *physical* lines
+
+|Parser |Builds the `AST`
+|===

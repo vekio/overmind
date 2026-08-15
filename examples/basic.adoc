@@ -1,0 +1,32 @@
+= Lexer Basics
+:toc:
+
+== Introduction
+
+// Plain paragraphs currently fall back to TEXT tokens.
+This paragraph is emitted as plain text.
+
+[[supported-items]]
+=== Supported items
+
+.Supported list forms
+* first item
+** second item
+
+. alternative marker
+.. another item
+
+* item with an attached paragraph
++
+The continuation attaches this paragraph to the item.
+
+CPU:: The processor
+RAM::: Nested description
+
+NOTE: This is an admonition paragraph.
+
+image::diagram.svg[Architecture diagram]
+
+'''
+
+<<<

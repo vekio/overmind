@@ -11,7 +11,7 @@ import (
 )
 
 func Load() (Config, error) {
-	path, err := DefaultPath()
+	path, err := defaultPath()
 	if err != nil {
 		return Config{}, err
 	}

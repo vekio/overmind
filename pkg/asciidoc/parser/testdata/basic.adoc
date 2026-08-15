@@ -1,0 +1,17 @@
+= Documento de prueba
+
+Introducción en dos líneas,
+con texto Unicode: café.
+
+// This comment is not represented in the AST.
+== Primera sección
+
+Contenido principal.
+
+=== Sección hija
+
+'''
+
+== Segunda sección
+
+<<<

@@ -12,7 +12,7 @@ import (
 
 const defaultDirectoryName = "overmind"
 
-func DefaultPath() (string, error) {
+func defaultPath() (string, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -28,6 +28,16 @@ func defaultConfig() Config {
 		},
 		Logging: Logging{
 			Level: "info",
+		},
+		HTTP: HTTP{
+			Address: "127.0.0.1:8080",
+		},
+		CLI: CLI{
+			Mode: CLIModeLocal,
+		},
+		Index: Index{
+			Driver: "sqlite",
+			Path:   "./.overmind/index.db",
 		},
 	}
 }

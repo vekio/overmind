@@ -1,0 +1,10 @@
+[source,go]
+[,ruby]
+[#example]
+[cols="1,1", options="header"]
+NOTE: Remember this.
+TIP: Try this.
+IMPORTANT: Do not forget.
+CAUTION: Proceed carefully.
+WARNING: Dangerous operation.
+'''

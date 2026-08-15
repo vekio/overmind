@@ -1,0 +1,26 @@
+= Designing a Go parser
+:note-type: youtube
+:youtube-url: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+:summary-section: Summary
+:tags: go,parsing,asciidoc
+
+This note is driven by its document-header attributes. The client application
+can inspect them before deciding whether to request an AI-generated summary.
+
+See <<source-video,the source video>> and then jump to <<summary>>.
+
+[[source-video,Source video]]
+.Original video
+video::https://www.youtube.com/watch?v=dQw4w9WgXcQ[width=960]
+
+[[summary,Generated summary]]
+== Summary
+
+The client can locate this section through `ast.Walk` and use its source span
+as the destination for a later source-editing increment.
+
+== Notes
+
+* The parser produces the syntax tree.
+* Semantic analysis computes effective header attributes.
+* The application owns the YouTube and AI workflow.

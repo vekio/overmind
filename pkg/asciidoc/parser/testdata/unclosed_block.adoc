@@ -1,0 +1,6 @@
+== Section
+
+[source,ruby]
+----
+puts "hello"
+-----

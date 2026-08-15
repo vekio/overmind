@@ -1,0 +1,143 @@
+= Parser AST Showcase
+:toc:
+:sectnums:
+
+This document exercises the syntax currently represented in the parser AST.
+Its first paragraph spans two physical lines so the resulting node contains
+normalized line breaks.
+
+Inline content can be *strong*, _emphasized_, or `monospaced`.
+The styles can be nested as `*_monospace bold italic_*`, while escaped marks
+such as \*this pair\* remain literal text.
+
+Unconstrained formatting works inside words such as **C**reate, fan__tastic__,
+and re``format``ted. Visit https://example.com[the project site] or jump to
+<<runtime-components,the runtime component table>>.
+
+== Source and verbatim blocks
+
+[[go-server,Go server example]]
+.A Go listing with attached metadata
+[source,go]
+[linenums]
+-----
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("delimiters such as ==== remain content here")
+}
+-----
+
+.A Ruby listing using an empty style position
+[,ruby]
+----
+puts "Hello from Ruby"
+----
+
+.Terminal output
+....
+$ overmind asciidoc parser document.adoc
+AST generated successfully
+....
+
+=== Passthrough content
+
+++++
+<section class="message">
+  <strong>This content is preserved without interpretation.</strong>
+</section>
+++++
+
+== Compound containers
+
+.An example block
+====
+The current increment preserves compound content as source text.
+
+=== This heading remains inside the example content
+It is not added to the section tree yet.
+====
+
+.A quotation
+____
+Programs must be written for people to read,
+and only incidentally for machines to execute.
+____
+
+.A sidebar
+****
+Sidebar content is also preserved for a later recursive parsing increment.
+****
+
+.An open block
+--
+Open blocks use the fixed two-character delimiter.
+--
+
+== Lists, admonitions, and macros
+
+.Parser stages
+* Scan each physical line with the `lexer`.
+** Preserve its exact source ending.
+** Extract payload offsets.
+* Build the block AST.
+* Parse *inline* content.
++
+This paragraph is attached to the final list item by a continuation marker.
++
+image::pipeline.svg[Parser pipeline]
+
+. Validation workflow
+.. Run the focused package tests.
+.. Run the complete repository checks.
+
+Lexer:: Produces line tokens.
+Parser::: Consumes tokens and constructs nested nodes.
+Formatter:: Serializes the resulting tree.
++
+NOTE: A continuation can attach an admonition to a description item.
+
+WARNING: Attribute references such as `{project-name}` are represented as
+plain text for now; document attribute entries are parsed but not evaluated.
+
+.Standalone block macro
+[[architecture-image]]
+image::architecture.svg[Architecture overview]
+
+== Tables and document structure
+
+[[runtime-components,Component inventory]]
+.Runtime components
+[cols="1,1",options="header"]
+|===
+|Component |Purpose
+
+|Lexer
+|Classifies physical lines
+
+|Parser
+|Constructs the block AST
+|===
+
+=== Nested section
+
+This paragraph belongs to the nested section.
+
+'''
+
+The thematic break above produces its own AST node.
+
+<<<
+
+The page break also produces its own AST node.
+
+////
+This whole comment block is consumed but omitted from the AST.
+== Hidden section
+////
+
+== Final section
+
+The final paragraph makes section boundaries easy to inspect in JSON.

@@ -1,0 +1,19 @@
++
+<<<
+CPU:: The processor
+Linux::: kernel
+image::sunset.jpg[Sunset]
+include::app.rb[lines=1..3]
+toc::[]
+--
+-----
+......
+======
+******
+______
+++++++
+//////
+|=====
+,===
+:===
+!===

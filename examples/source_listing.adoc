@@ -1,0 +1,23 @@
+= Source Listing
+
+== Go example
+
+[source,go]
+----
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, AsciiDoc lexer!")
+}
+----
+
+The lexer classifies each physical line independently.
+
+== Ruby include
+
+[,ruby]
+----
+include::app.rb[]
+----

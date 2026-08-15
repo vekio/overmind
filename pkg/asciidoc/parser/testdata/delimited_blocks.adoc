@@ -1,0 +1,20 @@
+= Blocks
+
+[[hello,Hello example]]
+.Example source
+[source,go]
+[linenums]
+-----
+package main
+== This is listing content
+// This is also listing content
+image::diagram.svg[]
+-----
+
+////
+== Hidden heading
+////
+
+|===
+|Name |Value
+|===

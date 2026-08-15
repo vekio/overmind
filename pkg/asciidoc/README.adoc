@@ -1,0 +1,381 @@
+= Overmind AsciiDoc
+
+This library provides a streaming, line-oriented lexer and an incremental
+block parser for a deliberately limited subset of AsciiDoc.
+
+For an application-oriented overview of the public API, diagnostics, AST
+traversal, semantic lookups, and source edits, see
+xref:docs/client-api.adoc[Client application guide].
+
+== Parser usage
+
+For applications that need both the AST and effective semantic information,
+the package root exposes the complete processing pipeline:
+
+[source,go]
+----
+result := asciidoc.Process(source)
+if result.HasErrors() {
+    return result.Diagnostics
+}
+
+document := result.Document
+analysis := result.Analysis
+----
+
+`ProcessReader` is the streaming equivalent. `ProcessResult.Diagnostics`
+combines parser and semantic diagnostics in source order;
+`ParseDiagnostics` and `Analysis.Diagnostics` remain available when a client
+needs to distinguish their origin. Semantic analysis still runs against the
+partial AST after parser errors, which is useful for editor integrations.
+
+Clients that only need the syntax tree can use the lower-level parser API:
+
+[source,go]
+----
+result := asciidoc.Parse(source)
+
+for _, item := range result.Diagnostics {
+    fmt.Println(item)
+}
+
+document := result.Document
+----
+
+Use `asciidoc.ParseReader(reader)` for streaming input. When an explicit parser
+value is useful, import `pkg/asciidoc/parser` and call `parser.New(reader)`.
+A parser consumes its reader and cannot be reused.
+
+`Result.Document` is always available, even when parsing reports errors. This
+makes the API suitable for editors and other tooling that need a partial AST.
+`Result.HasErrors()` distinguishes errors from warnings.
+
+The parser currently constructs these public nodes from the `ast` package:
+
+* `Document` and an optional level-zero `DocumentTitle`;
+* nested `Section` nodes built using heading levels;
+* `Paragraph` nodes from contiguous plain-text lines, with an inline tree;
+* `ThematicBreak` and `PageBreak` nodes;
+* ordered and unordered `List` nodes, nested by repeated markers;
+* `DescriptionList` nodes with nested terms;
+* continuation-attached blocks inside list items;
+* paragraph-form `Admonition` nodes;
+* `BlockMacro` nodes and unevaluated `AttributeEntry` nodes;
+* `DelimitedBlock` nodes for open, listing, literal, example, sidebar, quote,
+  and passthrough delimiters;
+* `Table`, `TableRow`, and `TableCell` nodes for PSV tables.
+
+A delimited block records its structural kind, content model, exact marker,
+opening/content/closing spans, whether it was closed, and the exact source text
+between its fences. Block titles, anchors, and general attribute lists directly
+preceding the fence are attached as `BlockMetadata`. Each extracted metadata
+fragment keeps its own source span. Attribute-list entries remain lexical
+values; interpreting `source`, `go`, roles, options, and named attributes is a
+later increment.
+
+Compound block contents are preserved but are not recursively parsed yet.
+Comment blocks consume their contents and do not produce AST nodes.
+An unclosed block produces an error at its opening fence while the partial
+`DelimitedBlock` remains in the AST with `Closed` set to false. A delimiter
+closes a block only when its complete marker matches the opening marker.
+
+Paragraph inline parsing recognizes constrained strong (`*text*`), emphasis
+(`_text_`), and monospace (pass:[`text`]) formatting, plus the unconstrained
+double-marker variants. These nodes may be nested without overlapping. A
+backslash escapes a formatting mark and is omitted from the corresponding
+`Text.Value`. Unclosed marks remain text and do not produce diagnostics.
+
+Explicit URL and `link:` macros produce `Link` nodes. Shorthand `<<target>>`
+and `xref:` forms produce `CrossReference` nodes. Their labels are parsed as
+inline content. Autolinks without square brackets, advanced macro attributes,
+and reference resolution inside the parser are not implemented. The separate
+semantic pass resolves supported local references after parsing.
+
+`Paragraph.Text` remains the complete normalized paragraph representation for
+API compatibility. `Paragraph.Inlines` contains `Text`, `Strong`, `Emphasis`,
+and `Monospace` nodes. Inline node spans always reference the original bytes,
+including when formatting crosses physical lines with `CRLF` endings.
+
+List item principals, description terms and descriptions, and admonition
+content also use the inline parser. A `+` line attaches the following supported
+block to the preceding list item. This increment nests lists only when the
+marker kind is unchanged; hybrid ordered/unordered nesting remains future
+work.
+
+Document attribute entries are represented in source order as AST blocks.
+They are not substituted into `{name}` references or used to configure parsing
+yet. Likewise, `include::` is preserved as a `BlockMacro`-shaped node and never
+causes file or network I/O.
+
+PSV tables delimited by `|===` or `!===` are parsed into columns, rows, and
+cells. The parser supports `cols`, `options="header"`, `%header`, implicit
+header detection, and a single-byte custom `separator`. Cell text uses the
+inline parser and every table component keeps a source span. The exact bytes
+between the fences also remain available in `Table.Content`. CSV, DSV, TSV,
+cell styles, spans, and multi-byte separators are not structurally parsed yet;
+their content is preserved and unsupported data formats produce a warning.
+An unclosed table remains as a partial `Table` node and produces an error.
+
+Comments and blank lines do not produce AST nodes. Syntax already recognized
+by the lexer but not yet supported by the parser produces a warning and is
+skipped, allowing parsing to continue. A section level jump also produces a
+warning while preserving the partial section tree.
+
+Parser diagnostics are defined in the public `diagnostic` package and point to
+half-open `ast.Span` source ranges. Paragraph line endings are normalized to
+LF in `Paragraph.Text`; the original source remains addressable through spans
+and can be reconstructed losslessly from lexer tokens.
+
+The public `format` package can serialize a result independently of the CLI:
+
+[source,go]
+----
+result := asciidoc.Parse(source)
+if err := format.WriteJSON(writer, result); err != nil {
+    return err
+}
+----
+
+The JSON representation has explicit node `kind` fields and includes both the
+AST and diagnostics. Paragraphs expose their recursively nested `inlines`;
+formatted nodes include both their complete `source` and delimiter-free
+`contentSource`. Delimited blocks expose their block kind, content model,
+metadata, exact content, closure state, and component source spans. This
+representation is intentionally separate from the AST model so adding another
+output format does not change parser nodes. Tables expose their format,
+separator, column specifications, header state, rows, cells, inline content,
+and exact source text.
+
+== Semantic analysis
+
+The parser preserves attribute declarations as syntax. A separate semantic
+pass derives the effective document-header attributes without mutating the
+AST:
+
+[source,go]
+----
+parsed := asciidoc.ParseReader(reader)
+if parsed.HasErrors() {
+    return parsed.Diagnostics
+}
+
+analysis := asciidoc.Analyze(parsed.Document)
+noteType, isSet := analysis.Header.Attributes.Lookup("note-type")
+if isSet && noteType == "youtube" {
+    // Apply the client application's YouTube workflow.
+}
+----
+
+Assignments are evaluated in source order, the last assignment wins, and an
+unset declaration removes the effective value. An empty assignment such as
+`:toc:` is still present: `Lookup("toc")` returns an empty string and `true`.
+`Get` also returns the declaration and its source spans, `History` returns all
+declarations for one name, and `All` returns every effective attribute in
+source order. Attribute names are matched exactly and body attributes do not
+participate in this header analysis.
+
+The public `ast.Walk` function traverses the complete node tree in depth-first
+pre-order. A client can use it to locate a destination section while keeping
+application-specific conventions outside the AsciiDoc library:
+
+[source,go]
+----
+var summary *ast.Section
+ast.Walk(parsed.Document, func(node ast.Node) bool {
+    section, ok := node.(*ast.Section)
+    if ok && section.Title == "Summary" {
+        summary = section
+        return false // Do not inspect this section's descendants.
+    }
+    return true
+})
+----
+
+Returning `false` prunes that node's descendants but does not stop traversal
+of its siblings. Block metadata is not visited because metadata values are not
+AST nodes.
+
+Semantic analysis also indexes explicit anchors attached to supported blocks
+and sections. `analysis.Anchors.Lookup(id)` returns the first declaration,
+`All` returns unique anchors in source order, and `History` exposes duplicate
+declarations. A duplicate anchor produces an error diagnostic while retaining
+the first declaration as the deterministic reference destination.
+
+Every parsed cross-reference is available in `analysis.References` with a
+`resolved`, `unresolved`, or `external` status. Local `<<id>>`, `xref:id[]`,
+and `xref:#id[]` forms resolve against the anchor index, including forward
+references. Missing local destinations produce warnings. Targets that clearly
+identify another document are retained as external and are not validated or
+loaded. Automatically generated section IDs, multi-document resolution,
+attribute substitution, and source rewriting remain later increments.
+
+The repository includes an application-style example that reads header
+attributes, decides whether a YouTube workflow applies, inspects anchors and
+references, locates the configured summary section, replaces its complete body
+with a sample generated summary, validates the result, and prints the resulting
+bytes without writing the source file:
+
+[source,shell]
+----
+go run ./examples/asciidoc_client examples/youtube_note.adoc
+----
+
+== Source-preserving edits
+
+The public `edit` package applies changes directly to the original bytes; it
+does not serialize the AST. This preserves comments, whitespace, line endings,
+and syntax that the parser does not interpret yet. A `TextEdit` can insert,
+replace, or delete a half-open source span, and `edit.Apply` rejects invalid or
+overlapping edits:
+
+[source,go]
+----
+updated, err := edit.Apply(source, []edit.TextEdit{change})
+----
+
+Sections expose separate spans for the complete node, heading, title, and body.
+An application that owns a section can replace its body directly:
+
+[source,go]
+----
+change, err := edit.ReplaceSectionContent(
+    source,
+    summarySection,
+    generatedSummary,
+)
+updated, err := edit.Apply(source, []edit.TextEdit{change})
+----
+
+`Section.ContentSource` begins immediately after the heading's physical line
+ending and extends to the end of the section, including nested sections. Thus a
+complete body replacement deliberately removes both manual content and nested
+sections; deciding whether this is acceptable is a client policy. Tables and
+delimited blocks likewise expose `ContentSource`, allowing a client to replace
+their contents while retaining metadata and fences.
+
+`ReplaceSectionContent` normalizes the fragment to the line ending used by the
+section heading and supplies conventional blank-line separation. The client is
+still responsible for generating the AsciiDoc fragment. Once edits are
+applied, all old AST spans are stale; clients must parse and analyze the
+updated bytes again before using node positions.
+Filesystem writes, backups, concurrent-change checks, diffs, confirmations,
+and atomic replacement remain responsibilities of the client.
+
+== Lexer usage
+
+The lexer reads one physical line at a time from an `io.Reader` and returns a
+`lexer.LineToken` containing its kind, raw source, exact line ending, absolute
+source span, and the payload associated with the recognized syntax.
+
+[source,go]
+----
+scanner := lexer.New(reader)
+
+for {
+    token, err := scanner.Next()
+    if err != nil {
+        return err
+    }
+    if token.Kind == lexer.LineEOF {
+        break
+    }
+    fmt.Println(token)
+}
+----
+
+Concatenating `token.SourceText()` for every token before `LineEOF`
+reconstructs the original input byte for byte, including mixed `LF`, `CRLF`,
+and `CR` line endings and a final line without a terminator.
+
+== Recognized lines
+
+* blank lines containing ASCII spaces or tabs;
+* headings from document level `=` through section level `======`;
+* document attribute entries, including `:name: value`, `:!name:`, and
+  `:name!:`;
+* general block attribute lists such as `[source,go]`, `[,ruby]`, and `[#id]`;
+* block anchors such as `[[id]]` and `[[id,Reference text]]`;
+* block titles such as `.Terminal Output`;
+* the fixed open-block delimiter `--`;
+* listing (`----`), literal (`....`), example (`====`), sidebar (`****`),
+  quote (`____`), passthrough (`++++`), and comment (`////`) delimiters,
+  including longer variants used for nesting;
+* table delimiters beginning with `|`, `,`, `:`, or `!`, such as `|===` and
+  `,===`;
+* unordered list items using repeated `*` markers for nesting;
+* ordered list items using repeated `.` markers for nesting;
+* list continuations written as `+` on a line by itself;
+* description list items such as `CPU:: The processor` and nested markers such
+  as `Linux::: Kernel description`;
+* admonition paragraph prefixes `NOTE`, `TIP`, `IMPORTANT`, `CAUTION`, and
+  `WARNING`;
+* line comments beginning with `//` and comment delimiters written as `////`;
+* thematic breaks written as exactly `'''`;
+* page breaks written as exactly `<<<`;
+* block-macro-shaped lines such as `image::sunset.jpg[Sunset]`,
+  `include::chapter.adoc[]`, and `toc::[]`;
+* plain text as the lossless fallback.
+
+The lexer does not construct an AST or interpret relationships between lines.
+For example, it reports delimiter lines but does not decide whether a delimited
+block is closed. Unsupported input is returned as `LineText` rather than
+discarded.
+
+Extracted fragments carry byte offsets relative to `LineToken.Raw`, allowing a
+parser to create precise diagnostics without searching for the fragment again.
+Attribute-list entries are split lexically into `AttributeListEntry` values,
+but they are not assigned full block semantics. A future parser will interpret the
+first position as the block style and the second as the source language when
+an attribute list such as `[source,go]` or `[,ruby]` is attached to a listing
+block.
+
+`include::...[]` is emitted as `LineBlockMacro` because it has the same lexical
+shape. The parser preserves that shape as `BlockMacro`; a future preprocessing
+phase will distinguish include and conditional directives from semantic block
+macros.
+
+== Command line
+
+The `overmind` executable exposes the lexer through the `asciidoc` command and
+a required AsciiDoc file path:
+
+[source,shell]
+----
+go run ./cmd/overmind asciidoc lexer document.adoc
+----
+
+The repository includes two files for manual CLI exploration:
+
+[source,shell]
+----
+go run ./cmd/overmind asciidoc lexer examples/basic.adoc
+go run ./cmd/overmind asciidoc lexer examples/source_listing.adoc
+----
+
+The `parser` subcommand prints the complete parse result as indented JSON:
+
+[source,shell]
+----
+go run ./cmd/overmind asciidoc parser document.adoc
+----
+
+For a more complete AST containing nested sections, block metadata, verbatim
+and compound containers, a table, thematic and page breaks, and an omitted
+comment block, use the parser showcase:
+
+[source,shell]
+----
+go run ./cmd/overmind asciidoc parser examples/parser_showcase.adoc
+----
+
+Every AST value includes an explicit `kind`, source positions are written as
+byte offset plus one-based line and column, and diagnostics are included in the
+same JSON object. Warnings still produce a successful command. Parser errors
+produce the partial AST and diagnostics first, then make the command exit with
+a non-zero status.
+
+== Tests
+
+Each recognition rule has focused unit tests. The files under
+`lexer/testdata/` exercise complete scanner runs over supported syntax,
+unsupported fallback forms, and multibyte Unicode content.

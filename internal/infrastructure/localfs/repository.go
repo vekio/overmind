@@ -11,10 +11,10 @@ import (
 	"slices"
 	"strings"
 
-	"git.casta.me/alberto/overmind/internal/ports/blobstore"
+	"git.casta.me/alberto/overmind/internal/ports"
 )
 
-var _ blobstore.Store = (*Store)(nil)
+var _ ports.BlobStore = (*Store)(nil)
 
 // Store implements blob storage in a local directory.
 type Store struct {
@@ -26,7 +26,7 @@ func New(rootPath string) *Store {
 	return &Store{rootPath: rootPath}
 }
 
-func (store *Store) Create(ctx context.Context, blob blobstore.Blob) error {
+func (store *Store) Create(ctx context.Context, blob ports.Blob) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func (store *Store) Create(ctx context.Context, blob blobstore.Blob) error {
 
 	targetFile, err := root.OpenFile(localPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if errors.Is(err, fs.ErrExist) {
-		return blobstore.ErrAlreadyExists
+		return ports.ErrBlobAlreadyExists
 	}
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (store *Store) Create(ctx context.Context, blob blobstore.Blob) error {
 	return nil
 }
 
-func (store *Store) Put(ctx context.Context, blob blobstore.Blob) error {
+func (store *Store) Put(ctx context.Context, blob ports.Blob) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -91,34 +91,34 @@ func (store *Store) Put(ctx context.Context, blob blobstore.Blob) error {
 	return root.WriteFile(localPath, blob.Content, 0o644)
 }
 
-func (store *Store) Get(ctx context.Context, blobPath string) (blobstore.Blob, error) {
+func (store *Store) Get(ctx context.Context, blobPath string) (ports.Blob, error) {
 	if err := ctx.Err(); err != nil {
-		return blobstore.Blob{}, err
+		return ports.Blob{}, err
 	}
 
 	cleanPath, err := normalizeBlobPath(blobPath)
 	if err != nil {
-		return blobstore.Blob{}, err
+		return ports.Blob{}, err
 	}
 
 	root, err := store.openRepositoryRoot(false)
 	if errors.Is(err, fs.ErrNotExist) {
-		return blobstore.Blob{}, blobstore.ErrNotFound
+		return ports.Blob{}, ports.ErrBlobNotFound
 	}
 	if err != nil {
-		return blobstore.Blob{}, err
+		return ports.Blob{}, err
 	}
 	defer root.Close()
 
 	contentBytes, err := root.ReadFile(filepath.FromSlash(cleanPath))
 	if errors.Is(err, fs.ErrNotExist) {
-		return blobstore.Blob{}, blobstore.ErrNotFound
+		return ports.Blob{}, ports.ErrBlobNotFound
 	}
 	if err != nil {
-		return blobstore.Blob{}, err
+		return ports.Blob{}, err
 	}
 
-	return blobstore.Blob{Path: cleanPath, Content: contentBytes}, nil
+	return ports.Blob{Path: cleanPath, Content: contentBytes}, nil
 }
 
 func (store *Store) Delete(ctx context.Context, blobPath string) error {
@@ -133,7 +133,7 @@ func (store *Store) Delete(ctx context.Context, blobPath string) error {
 
 	root, err := store.openRepositoryRoot(false)
 	if errors.Is(err, fs.ErrNotExist) {
-		return blobstore.ErrNotFound
+		return ports.ErrBlobNotFound
 	}
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (store *Store) Delete(ctx context.Context, blobPath string) error {
 	defer root.Close()
 
 	if err := root.Remove(filepath.FromSlash(cleanPath)); errors.Is(err, fs.ErrNotExist) {
-		return blobstore.ErrNotFound
+		return ports.ErrBlobNotFound
 	} else if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (store *Store) Delete(ctx context.Context, blobPath string) error {
 	return nil
 }
 
-func (store *Store) List(ctx context.Context, filter blobstore.Filter) ([]string, error) {
+func (store *Store) List(ctx context.Context, filter ports.BlobFilter) ([]string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -223,12 +223,12 @@ func (store *Store) openRepositoryRoot(create bool) (*os.Root, error) {
 func normalizeBlobPath(blobPath string) (string, error) {
 	blobPath = strings.TrimSpace(blobPath)
 	if blobPath == "" || strings.Contains(blobPath, "\\") {
-		return "", blobstore.ErrInvalidPath
+		return "", ports.ErrInvalidBlobPath
 	}
 
 	clean := path.Clean(blobPath)
 	if clean == "." || path.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, "../") {
-		return "", blobstore.ErrInvalidPath
+		return "", ports.ErrInvalidBlobPath
 	}
 	return clean, nil
 }

@@ -1,0 +1,9 @@
+{{ define "page" -}}
+= {{ .Title }}
+:overmind-id: {{ .ID }}
+:overmind-type: page
+:overmind-title: {{ .Title }}
+:overmind-area:{{ if not .Area.IsZero }} {{ .Area }}{{ end }}
+:overmind-created-at: {{ rfc3339 .CreatedAt }}
+
+{{ end -}}

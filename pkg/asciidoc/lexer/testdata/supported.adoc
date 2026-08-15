@@ -1,0 +1,10 @@
+== Introduction
+
+[source,go]
+----
+package main
+* item
+** nested item
+. ordered
+.. nested ordered
+----
