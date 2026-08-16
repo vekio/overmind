@@ -10,3 +10,11 @@ func configFlag() urfavecli.Flag {
 		Sources: urfavecli.EnvVars("OVERMIND_CONFIG"),
 	}
 }
+
+func tagFlag() urfavecli.Flag {
+	return &urfavecli.StringSliceFlag{
+		Name:    "tag",
+		Aliases: []string{"t"},
+		Usage:   "repeat the flag to add more",
+	}
+}

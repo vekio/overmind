@@ -16,8 +16,9 @@ import (
 const maxCreateRequestSize = 1 << 20
 
 type createRequest struct {
-	Title string `json:"title"`
-	Area  string `json:"area"`
+	Title string   `json:"title"`
+	Area  string   `json:"area"`
+	Tags  []string `json:"tags,omitempty"`
 }
 
 type createResponse struct {
@@ -47,10 +48,12 @@ func handleCreate(handler app.CreatePageHandler) stdhttp.HandlerFunc {
 		result, err := handler.Handle(request.Context(), createpage.CreatePageCommand{
 			Title: input.Title,
 			Area:  input.Area,
+			Tags:  input.Tags,
 		})
 		if err != nil {
 			switch {
-			case errors.Is(err, domain.ErrInvalidTitle), errors.Is(err, domain.ErrInvalidArea):
+			case errors.Is(err, domain.ErrInvalidTitle), errors.Is(err, domain.ErrInvalidArea),
+				errors.Is(err, domain.ErrInvalidTag), errors.Is(err, domain.ErrDuplicateTag):
 				httpresponse.Error(response, stdhttp.StatusBadRequest, "invalid page")
 			case errors.Is(err, ports.ErrBlobAlreadyExists):
 				httpresponse.Error(response, stdhttp.StatusConflict, "page already exists")

@@ -39,6 +39,7 @@ func TestHandlerGetsDocumentByID(t *testing.T) {
 		Path:       "page/page.adoc",
 		Kind:       "page",
 		Title:      "Page",
+		Tags:       []string{"ddd", "go"},
 		CreatedAt:  createdAt,
 		Attributes: map[string]string{"area": "knowledge"},
 	}}, blobReaderStub{blob: ports.Blob{Path: "page/page.adoc", Content: []byte("= Page\n")}})
@@ -47,7 +48,7 @@ func TestHandlerGetsDocumentByID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
-	if result.ID.String() != "page-id" || result.Path != "page/page.adoc" || result.Kind != "page" || result.Title != "Page" || !result.CreatedAt.Equal(createdAt) || string(result.Content) != "= Page\n" || result.Attributes["area"] != "knowledge" {
+	if result.ID.String() != "page-id" || result.Path != "page/page.adoc" || result.Kind != "page" || result.Title != "Page" || len(result.Tags) != 2 || !result.CreatedAt.Equal(createdAt) || string(result.Content) != "= Page\n" || result.Attributes["area"] != "knowledge" {
 		t.Fatalf("Handle() = %+v", result)
 	}
 }

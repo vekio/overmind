@@ -17,6 +17,7 @@ type getResponse struct {
 	Path       string            `json:"path"`
 	Kind       string            `json:"kind"`
 	Title      string            `json:"title"`
+	Tags       []string          `json:"tags"`
 	CreatedAt  time.Time         `json:"createdAt"`
 	Content    string            `json:"content"`
 	Attributes map[string]string `json:"attributes"`
@@ -46,6 +47,7 @@ func handleGet(handler app.GetDocumentHandler) stdhttp.HandlerFunc {
 			Path:       result.Path,
 			Kind:       result.Kind.String(),
 			Title:      result.Title,
+			Tags:       result.Tags,
 			CreatedAt:  result.CreatedAt,
 			Content:    string(result.Content),
 			Attributes: result.Attributes,

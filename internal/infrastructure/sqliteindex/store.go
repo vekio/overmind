@@ -114,12 +114,17 @@ func (store *Store) GetByID(ctx context.Context, id domain.DocumentID) (ports.In
 	if err != nil {
 		return ports.IndexedDocument{}, fmt.Errorf("list indexed document attributes: %w", err)
 	}
+	tags, err := store.queries.ListDocumentTags(ctx, id.String())
+	if err != nil {
+		return ports.IndexedDocument{}, fmt.Errorf("list indexed document tags: %w", err)
+	}
 
 	result := ports.IndexedDocument{
 		ID:         id,
 		Path:       document.Path,
 		Kind:       kind,
 		Title:      document.Title,
+		Tags:       tags,
 		CreatedAt:  createdAt,
 		Attributes: make(map[string]string, len(attributes)),
 	}
@@ -181,6 +186,18 @@ func upsert(ctx context.Context, queries *sqlitedb.Queries, document ports.Index
 	}
 	if err := queries.DeleteDocumentAttributes(ctx, document.ID.String()); err != nil {
 		return fmt.Errorf("replace indexed document attributes: %w", err)
+	}
+	if err := queries.DeleteDocumentTags(ctx, document.ID.String()); err != nil {
+		return fmt.Errorf("replace indexed document tags: %w", err)
+	}
+	for position, tag := range document.Tags {
+		if err := queries.InsertDocumentTag(ctx, sqlitedb.InsertDocumentTagParams{
+			DocumentID: document.ID.String(),
+			Tag:        tag,
+			Position:   int64(position),
+		}); err != nil {
+			return fmt.Errorf("insert indexed document tag %q: %w", tag, err)
+		}
 	}
 
 	names := make([]string, 0, len(document.Attributes))

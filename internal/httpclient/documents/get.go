@@ -38,6 +38,7 @@ type getResponse struct {
 	Path       string            `json:"path"`
 	Kind       string            `json:"kind"`
 	Title      string            `json:"title"`
+	Tags       []string          `json:"tags"`
 	CreatedAt  time.Time         `json:"createdAt"`
 	Content    string            `json:"content"`
 	Attributes map[string]string `json:"attributes"`
@@ -89,6 +90,7 @@ func (handler *GetHandler) Handle(ctx context.Context, query getdocument.GetDocu
 		Path:       output.Path,
 		Kind:       kind,
 		Title:      output.Title,
+		Tags:       output.Tags,
 		CreatedAt:  output.CreatedAt,
 		Content:    []byte(output.Content),
 		Attributes: output.Attributes,

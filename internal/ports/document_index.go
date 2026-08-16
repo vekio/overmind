@@ -17,6 +17,7 @@ type IndexedDocument struct {
 	Path       string
 	Kind       domain.DocumentKind
 	Title      string
+	Tags       []string
 	CreatedAt  time.Time
 	Attributes map[string]string
 }

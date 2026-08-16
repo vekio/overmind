@@ -46,6 +46,7 @@ func (handler *GetDocumentHandler) Handle(ctx context.Context, query GetDocument
 		Path:       document.Path,
 		Kind:       document.Kind,
 		Title:      document.Title,
+		Tags:       append([]string(nil), document.Tags...),
 		CreatedAt:  document.CreatedAt,
 		Content:    append([]byte(nil), blob.Content...),
 		Attributes: cloneAttributes(document.Attributes),

@@ -33,8 +33,9 @@ func NewCreateHandler(client *httpclient.Client) *CreateHandler {
 }
 
 type createRequest struct {
-	Title string `json:"title"`
-	Area  string `json:"area"`
+	Title string   `json:"title"`
+	Area  string   `json:"area"`
+	Tags  []string `json:"tags,omitempty"`
 }
 
 type createResponse struct {
@@ -48,7 +49,7 @@ type errorResponse struct {
 // Handle sends the create-page command to the remote API.
 func (handler *CreateHandler) Handle(ctx context.Context, command createpage.CreatePageCommand) (createpage.CreatePageResult, error) {
 	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(createRequest{Title: command.Title, Area: command.Area}); err != nil {
+	if err := json.NewEncoder(&body).Encode(createRequest{Title: command.Title, Area: command.Area, Tags: command.Tags}); err != nil {
 		return createpage.CreatePageResult{}, fmt.Errorf("encode create page request: %w", err)
 	}
 

@@ -24,7 +24,7 @@ func TestCreateHandlerCallsRemoteAPI(t *testing.T) {
 		if err := json.NewDecoder(request.Body).Decode(&input); err != nil {
 			t.Fatalf("Decode() error = %v", err)
 		}
-		if input.Title != "Remote page" || input.Area != "Knowledge" {
+		if input.Title != "Remote page" || input.Area != "Knowledge" || len(input.Tags) != 2 || input.Tags[0] != "Go" || input.Tags[1] != "DDD" {
 			t.Fatalf("request body = %+v", input)
 		}
 		response.Header().Set("Content-Type", "application/json")
@@ -40,6 +40,7 @@ func TestCreateHandlerCallsRemoteAPI(t *testing.T) {
 	result, err := NewCreateHandler(client).Handle(context.Background(), createpage.CreatePageCommand{
 		Title: "Remote page",
 		Area:  "Knowledge",
+		Tags:  []string{"Go", "DDD"},
 	})
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)

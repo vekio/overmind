@@ -28,6 +28,16 @@ func (q *Queries) DeleteDocumentAttributes(ctx context.Context, documentID strin
 	return err
 }
 
+const deleteDocumentTags = `-- name: DeleteDocumentTags :exec
+DELETE FROM document_tags
+WHERE document_id = ?
+`
+
+func (q *Queries) DeleteDocumentTags(ctx context.Context, documentID string) error {
+	_, err := q.db.ExecContext(ctx, deleteDocumentTags, documentID)
+	return err
+}
+
 const getDocumentByID = `-- name: GetDocumentByID :one
 SELECT id, path, kind, title, created_at
 FROM documents
@@ -63,6 +73,22 @@ func (q *Queries) InsertDocumentAttribute(ctx context.Context, arg InsertDocumen
 	return err
 }
 
+const insertDocumentTag = `-- name: InsertDocumentTag :exec
+INSERT INTO document_tags (document_id, tag, position)
+VALUES (?, ?, ?)
+`
+
+type InsertDocumentTagParams struct {
+	DocumentID string `db:"document_id"`
+	Tag        string `db:"tag"`
+	Position   int64  `db:"position"`
+}
+
+func (q *Queries) InsertDocumentTag(ctx context.Context, arg InsertDocumentTagParams) error {
+	_, err := q.db.ExecContext(ctx, insertDocumentTag, arg.DocumentID, arg.Tag, arg.Position)
+	return err
+}
+
 const listDocumentAttributes = `-- name: ListDocumentAttributes :many
 SELECT name, value
 FROM document_attributes
@@ -88,6 +114,36 @@ func (q *Queries) ListDocumentAttributes(ctx context.Context, documentID string)
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDocumentTags = `-- name: ListDocumentTags :many
+SELECT tag
+FROM document_tags
+WHERE document_id = ?
+ORDER BY position
+`
+
+func (q *Queries) ListDocumentTags(ctx context.Context, documentID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listDocumentTags, documentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			return nil, err
+		}
+		items = append(items, tag)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

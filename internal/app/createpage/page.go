@@ -19,6 +19,10 @@ func (handler *CreatePageHandler) newPageFromCommand(command CreatePageCommand) 
 	if err != nil {
 		return domain.Page{}, err
 	}
+	tags, err := tagsFromStrings(command.Tags)
+	if err != nil {
+		return domain.Page{}, err
+	}
 
 	generatedID, err := handler.idGenerator.Generate()
 	if err != nil {
@@ -29,7 +33,19 @@ func (handler *CreatePageHandler) newPageFromCommand(command CreatePageCommand) 
 		return domain.Page{}, fmt.Errorf("invalid generated document id: %w", err)
 	}
 
-	return domain.NewPage(documentID, title, area, handler.clock.Now()), nil
+	return domain.NewPage(documentID, title, tags, area, handler.clock.Now()), nil
+}
+
+func tagsFromStrings(values []string) (domain.Tags, error) {
+	tags := make([]domain.Tag, len(values))
+	for index, value := range values {
+		tag, err := domain.NewTag(value)
+		if err != nil {
+			return domain.Tags{}, err
+		}
+		tags[index] = tag
+	}
+	return domain.NewTags(tags...)
 }
 
 func optionalArea(value string) (domain.Area, error) {
@@ -53,6 +69,7 @@ func indexEntryForPage(page domain.Page, documentKey string) ports.IndexedDocume
 		Path:      documentKey,
 		Kind:      page.Kind(),
 		Title:     page.Title().String(),
+		Tags:      page.Tags().Strings(),
 		CreatedAt: page.CreatedAt(),
 		Attributes: map[string]string{
 			"area": page.Area().String(),

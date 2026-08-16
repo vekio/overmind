@@ -25,6 +25,7 @@ func TestStoreUpsertAndGetByID(t *testing.T) {
 		Path:      "page/knowledge/page.adoc",
 		Kind:      "page",
 		Title:     "Page",
+		Tags:      []string{"go", "ddd"},
 		CreatedAt: createdAt,
 		Attributes: map[string]string{
 			"area": "knowledge",
@@ -38,7 +39,7 @@ func TestStoreUpsertAndGetByID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByID() error = %v", err)
 	}
-	if got.Path != document.Path || got.Kind != "page" || got.Title != "Page" || !got.CreatedAt.Equal(createdAt) || got.Attributes["area"] != "knowledge" {
+	if got.Path != document.Path || got.Kind != "page" || got.Title != "Page" || len(got.Tags) != 2 || got.Tags[0] != "go" || got.Tags[1] != "ddd" || !got.CreatedAt.Equal(createdAt) || got.Attributes["area"] != "knowledge" {
 		t.Fatalf("GetByID() = %+v", got)
 	}
 }

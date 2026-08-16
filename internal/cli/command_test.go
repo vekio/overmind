@@ -84,7 +84,7 @@ logging:
 
 	err := command.Run(context.Background(), []string{
 		"overmind", "--config", configPath,
-		"page", "First page", "--area", "Knowledge/Go",
+		"page", "First page", "--area", "Knowledge/Go", "--tag", "Go", "--tag", "DDD",
 	})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -92,7 +92,7 @@ logging:
 	if selectedConfig.Vault.RootPath != "./vault" {
 		t.Fatalf("selected root = %q", selectedConfig.Vault.RootPath)
 	}
-	if handler.command.Title != "First page" || handler.command.Area != "Knowledge/Go" {
+	if handler.command.Title != "First page" || handler.command.Area != "Knowledge/Go" || len(handler.command.Tags) != 2 || handler.command.Tags[0] != "Go" || handler.command.Tags[1] != "DDD" {
 		t.Fatalf("use-case command = %+v", handler.command)
 	}
 	if output.String() != "page-id\n" {

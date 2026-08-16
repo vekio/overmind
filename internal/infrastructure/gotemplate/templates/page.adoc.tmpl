@@ -4,6 +4,7 @@
 :overmind-type: page
 :overmind-title: {{ .Title }}
 :overmind-area:{{ if not .Area.IsZero }} {{ .Area }}{{ end }}
+:overmind-tags:{{ if not .Tags.IsEmpty }} {{ comma .Tags.Strings }}{{ end }}
 :overmind-created-at: {{ rfc3339 .CreatedAt }}
 
 {{ end -}}

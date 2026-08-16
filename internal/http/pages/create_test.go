@@ -33,7 +33,7 @@ func pageRoutes(handler *createHandlerStub) stdhttp.Handler {
 func TestCreate(t *testing.T) {
 	id, _ := domain.NewDocumentID("page-id")
 	handler := &createHandlerStub{result: createpage.CreatePageResult{ID: id}}
-	request := httptest.NewRequest(stdhttp.MethodPost, "/pages", strings.NewReader(`{"title":"First page","area":"Knowledge"}`))
+	request := httptest.NewRequest(stdhttp.MethodPost, "/pages", strings.NewReader(`{"title":"First page","area":"Knowledge","tags":["Go","DDD"]}`))
 	response := httptest.NewRecorder()
 
 	pageRoutes(handler).ServeHTTP(response, request)
@@ -44,7 +44,7 @@ func TestCreate(t *testing.T) {
 	if got, want := response.Body.String(), "{\"id\":\"page-id\"}\n"; got != want {
 		t.Fatalf("body = %q, want %q", got, want)
 	}
-	if handler.command.Title != "First page" || handler.command.Area != "Knowledge" {
+	if handler.command.Title != "First page" || handler.command.Area != "Knowledge" || len(handler.command.Tags) != 2 {
 		t.Fatalf("command = %+v", handler.command)
 	}
 }
@@ -65,9 +65,11 @@ func TestCreateMapsUseCaseErrors(t *testing.T) {
 		err    error
 		status int
 	}{
-		"invalid page": {err: domain.ErrInvalidTitle, status: stdhttp.StatusBadRequest},
-		"conflict":     {err: ports.ErrBlobAlreadyExists, status: stdhttp.StatusConflict},
-		"internal":     {err: errors.New("failure"), status: stdhttp.StatusInternalServerError},
+		"invalid page":  {err: domain.ErrInvalidTitle, status: stdhttp.StatusBadRequest},
+		"invalid tag":   {err: domain.ErrInvalidTag, status: stdhttp.StatusBadRequest},
+		"duplicate tag": {err: domain.ErrDuplicateTag, status: stdhttp.StatusBadRequest},
+		"conflict":      {err: ports.ErrBlobAlreadyExists, status: stdhttp.StatusConflict},
+		"internal":      {err: errors.New("failure"), status: stdhttp.StatusInternalServerError},
 	} {
 		t.Run(name, func(t *testing.T) {
 			request := httptest.NewRequest(stdhttp.MethodPost, "/pages", strings.NewReader(`{"title":"Page"}`))

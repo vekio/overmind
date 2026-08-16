@@ -38,6 +38,7 @@ func TestGet(t *testing.T) {
 		Path:      "page/knowledge/page.adoc",
 		Kind:      "page",
 		Title:     "Page",
+		Tags:      []string{"ddd", "go"},
 		CreatedAt: createdAt,
 		Content:   []byte("= Page\n"),
 		Attributes: map[string]string{
@@ -55,7 +56,7 @@ func TestGet(t *testing.T) {
 	if handler.query.ID != "page-id" {
 		t.Fatalf("query = %+v", handler.query)
 	}
-	want := "{\"id\":\"page-id\",\"path\":\"page/knowledge/page.adoc\",\"kind\":\"page\",\"title\":\"Page\",\"createdAt\":\"2026-08-16T10:00:00Z\",\"content\":\"= Page\\n\",\"attributes\":{\"area\":\"knowledge\"}}\n"
+	want := "{\"id\":\"page-id\",\"path\":\"page/knowledge/page.adoc\",\"kind\":\"page\",\"title\":\"Page\",\"tags\":[\"ddd\",\"go\"],\"createdAt\":\"2026-08-16T10:00:00Z\",\"content\":\"= Page\\n\",\"attributes\":{\"area\":\"knowledge\"}}\n"
 	if response.Body.String() != want {
 		t.Fatalf("body = %q, want %q", response.Body.String(), want)
 	}

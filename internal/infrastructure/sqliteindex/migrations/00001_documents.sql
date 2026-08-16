@@ -15,6 +15,17 @@ CREATE TABLE document_attributes (
     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
 );
 
+CREATE TABLE document_tags (
+    document_id TEXT NOT NULL,
+    tag TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    PRIMARY KEY (document_id, tag),
+    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+);
+
+CREATE INDEX document_tags_tag_document_id_idx
+    ON document_tags(tag, document_id);
+
 CREATE INDEX document_attributes_name_value_idx
     ON document_attributes(name, value);
 
@@ -23,5 +34,7 @@ CREATE INDEX documents_kind_path_id_idx
 
 -- +goose Down
 DROP INDEX documents_kind_path_id_idx;
+DROP INDEX document_tags_tag_document_id_idx;
+DROP TABLE document_tags;
 DROP TABLE document_attributes;
 DROP TABLE documents;

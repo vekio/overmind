@@ -16,6 +16,7 @@ const (
 	headerID        = headerPrefix + "id"
 	headerKind      = headerPrefix + "type"
 	headerTitle     = headerPrefix + "title"
+	headerTags      = headerPrefix + "tags"
 	headerCreatedAt = headerPrefix + "created-at"
 )
 
@@ -91,6 +92,10 @@ func indexedDocument(blob ports.Blob) (ports.IndexedDocument, bool, error) {
 	if err != nil {
 		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerTitle, err)
 	}
+	tags, err := tagsFromHeader(headers[headerTags])
+	if err != nil {
+		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerTags, err)
+	}
 	createdAt, err := time.Parse(time.RFC3339, headers[headerCreatedAt])
 	if err != nil {
 		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerCreatedAt, err)
@@ -99,7 +104,7 @@ func indexedDocument(blob ports.Blob) (ports.IndexedDocument, bool, error) {
 	attributes := make(map[string]string)
 	for name, value := range headers {
 		switch name {
-		case headerID, headerKind, headerTitle, headerCreatedAt:
+		case headerID, headerKind, headerTitle, headerTags, headerCreatedAt:
 			continue
 		default:
 			attributes[strings.TrimPrefix(name, headerPrefix)] = value
@@ -111,7 +116,24 @@ func indexedDocument(blob ports.Blob) (ports.IndexedDocument, bool, error) {
 		Path:       blob.Path,
 		Kind:       kind,
 		Title:      title.String(),
+		Tags:       tags.Strings(),
 		CreatedAt:  createdAt,
 		Attributes: attributes,
 	}, true, nil
+}
+
+func tagsFromHeader(value string) (domain.Tags, error) {
+	if strings.TrimSpace(value) == "" {
+		return domain.Tags{}, nil
+	}
+	values := strings.Split(value, ",")
+	tags := make([]domain.Tag, len(values))
+	for index := range values {
+		tag, err := domain.NewTag(strings.TrimSpace(values[index]))
+		if err != nil {
+			return domain.Tags{}, err
+		}
+		tags[index] = tag
+	}
+	return domain.NewTags(tags...)
 }

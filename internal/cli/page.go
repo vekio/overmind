@@ -21,7 +21,7 @@ func newPageCommand(state *applicationState) *urfavecli.Command {
 				Max:       1,
 			},
 		},
-		Flags: []urfavecli.Flag{areaFlag()},
+		Flags: []urfavecli.Flag{areaFlag(), tagFlag()},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			application, err := state.get()
 			if err != nil {
@@ -31,6 +31,7 @@ func newPageCommand(state *applicationState) *urfavecli.Command {
 			result, err := application.Commands.CreatePage.Handle(ctx, createpage.CreatePageCommand{
 				Title: command.StringArgs("title")[0],
 				Area:  command.String("area"),
+				Tags:  command.StringSlice("tag"),
 			})
 			if err != nil {
 				return err

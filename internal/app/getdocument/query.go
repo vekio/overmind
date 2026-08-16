@@ -18,6 +18,7 @@ type GetDocumentResult struct {
 	Path       string
 	Kind       domain.DocumentKind
 	Title      string
+	Tags       []string
 	CreatedAt  time.Time
 	Content    []byte
 	Attributes map[string]string

@@ -67,6 +67,7 @@ func TestHandlerRendersAndPersistsANewPage(t *testing.T) {
 	result, err := handler.Handle(context.Background(), CreatePageCommand{
 		Title: " First page ",
 		Area:  "Knowledge/Go",
+		Tags:  []string{"Go", "Diseño de dominio"},
 	})
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
@@ -78,7 +79,7 @@ func TestHandlerRendersAndPersistsANewPage(t *testing.T) {
 		t.Fatalf("Render() name = %q, want %q", renderer.name, "page")
 	}
 	page, ok := renderer.data.(domain.Page)
-	if !ok || page.Title().String() != "First page" || page.Title().Slug() != "first-page" || page.Area().String() != "knowledge/go" || page.ID().String() != "page-id" || !page.CreatedAt().Equal(createdAt) {
+	if !ok || page.Title().String() != "First page" || page.Title().Slug() != "first-page" || page.Area().String() != "knowledge/go" || page.ID().String() != "page-id" || page.Tags().Len() != 2 || !page.CreatedAt().Equal(createdAt) {
 		t.Fatalf("Render() data = %#v", renderer.data)
 	}
 
@@ -89,7 +90,7 @@ func TestHandlerRendersAndPersistsANewPage(t *testing.T) {
 	if string(content) != "rendered page" {
 		t.Fatalf("stored content = %q", content)
 	}
-	if index.document.ID.String() != "page-id" || index.document.Path != "page/knowledge/go/first-page.adoc" || index.document.Kind != domain.DocumentKindPage || index.document.Title != "First page" || index.document.Attributes["area"] != "knowledge/go" {
+	if index.document.ID.String() != "page-id" || index.document.Path != "page/knowledge/go/first-page.adoc" || index.document.Kind != domain.DocumentKindPage || index.document.Title != "First page" || len(index.document.Tags) != 2 || index.document.Attributes["area"] != "knowledge/go" {
 		t.Fatalf("indexed document = %+v", index.document)
 	}
 }
@@ -150,6 +151,8 @@ func TestHandlerUsesDomainValidation(t *testing.T) {
 	for name, command := range map[string]CreatePageCommand{
 		"missing title": {Area: "Knowledge"},
 		"invalid area":  {Title: "Page", Area: "///"},
+		"invalid tag":   {Title: "Page", Tags: []string{"---"}},
+		"duplicate tag": {Title: "Page", Tags: []string{"Go", "go"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := handler.Handle(context.Background(), command); err == nil || !strings.Contains(err.Error(), "create page") {

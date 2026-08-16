@@ -17,3 +17,9 @@ type DocumentAttribute struct {
 	Name       string `db:"name"`
 	Value      string `db:"value"`
 }
+
+type DocumentTag struct {
+	DocumentID string `db:"document_id"`
+	Tag        string `db:"tag"`
+	Position   int64  `db:"position"`
+}
