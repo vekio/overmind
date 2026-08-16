@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
@@ -101,6 +102,14 @@ func (store *Store) GetByID(ctx context.Context, id domain.DocumentID) (ports.In
 	if err != nil {
 		return ports.IndexedDocument{}, fmt.Errorf("get indexed document: %w", err)
 	}
+	kind, err := domain.NewDocumentKind(document.Kind)
+	if err != nil {
+		return ports.IndexedDocument{}, fmt.Errorf("decode indexed document kind: %w", err)
+	}
+	createdAt, err := time.Parse(time.RFC3339, document.CreatedAt)
+	if err != nil {
+		return ports.IndexedDocument{}, fmt.Errorf("decode indexed document creation time: %w", err)
+	}
 	attributes, err := store.queries.ListDocumentAttributes(ctx, id.String())
 	if err != nil {
 		return ports.IndexedDocument{}, fmt.Errorf("list indexed document attributes: %w", err)
@@ -109,7 +118,9 @@ func (store *Store) GetByID(ctx context.Context, id domain.DocumentID) (ports.In
 	result := ports.IndexedDocument{
 		ID:         id,
 		Path:       document.Path,
-		Content:    document.Content,
+		Kind:       kind,
+		Title:      document.Title,
+		CreatedAt:  createdAt,
 		Attributes: make(map[string]string, len(attributes)),
 	}
 	for _, attribute := range attributes {
@@ -160,9 +171,11 @@ func (store *Store) ReplaceAll(ctx context.Context, documents []ports.IndexedDoc
 
 func upsert(ctx context.Context, queries *sqlitedb.Queries, document ports.IndexedDocument) error {
 	if err := queries.UpsertDocument(ctx, sqlitedb.UpsertDocumentParams{
-		ID:      document.ID.String(),
-		Path:    document.Path,
-		Content: document.Content,
+		ID:        document.ID.String(),
+		Path:      document.Path,
+		Kind:      document.Kind.String(),
+		Title:     document.Title,
+		CreatedAt: document.CreatedAt.UTC().Format(time.RFC3339),
 	}); err != nil {
 		return fmt.Errorf("upsert indexed document: %w", err)
 	}

@@ -5,9 +5,11 @@
 package sqlitedb
 
 type Document struct {
-	ID      string `db:"id"`
-	Path    string `db:"path"`
-	Content []byte `db:"content"`
+	ID        string `db:"id"`
+	Path      string `db:"path"`
+	Kind      string `db:"kind"`
+	Title     string `db:"title"`
+	CreatedAt string `db:"created_at"`
 }
 
 type DocumentAttribute struct {

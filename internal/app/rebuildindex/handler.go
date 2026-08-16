@@ -4,10 +4,19 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/ports"
 	"git.casta.me/alberto/overmind/pkg/asciidoc"
+)
+
+const (
+	headerPrefix    = "overmind-"
+	headerID        = headerPrefix + "id"
+	headerKind      = headerPrefix + "type"
+	headerTitle     = headerPrefix + "title"
+	headerCreatedAt = headerPrefix + "created-at"
 )
 
 // RebuildIndexHandler reconstructs the read model from managed AsciiDoc blobs.
@@ -57,13 +66,13 @@ func (handler *RebuildIndexHandler) Handle(ctx context.Context, _ RebuildIndexCo
 
 func indexedDocument(blob ports.Blob) (ports.IndexedDocument, bool, error) {
 	processed := asciidoc.Process(blob.Content)
-	attributes := make(map[string]string)
+	headers := make(map[string]string)
 	for _, attribute := range processed.Analysis.Header.Attributes.All() {
-		if strings.HasPrefix(attribute.Name, domain.AttributePrefix) {
-			attributes[attribute.Name] = attribute.Value
+		if strings.HasPrefix(attribute.Name, headerPrefix) {
+			headers[attribute.Name] = attribute.Value
 		}
 	}
-	idValue, managed := attributes[domain.AttributeID]
+	idValue, managed := headers[headerID]
 	if !managed {
 		return ports.IndexedDocument{}, false, nil
 	}
@@ -74,11 +83,35 @@ func indexedDocument(blob ports.Blob) (ports.IndexedDocument, bool, error) {
 	if err != nil {
 		return ports.IndexedDocument{}, false, err
 	}
+	kind, err := domain.NewDocumentKind(headers[headerKind])
+	if err != nil {
+		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerKind, err)
+	}
+	title, err := domain.NewTitle(headers[headerTitle])
+	if err != nil {
+		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerTitle, err)
+	}
+	createdAt, err := time.Parse(time.RFC3339, headers[headerCreatedAt])
+	if err != nil {
+		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerCreatedAt, err)
+	}
+
+	attributes := make(map[string]string)
+	for name, value := range headers {
+		switch name {
+		case headerID, headerKind, headerTitle, headerCreatedAt:
+			continue
+		default:
+			attributes[strings.TrimPrefix(name, headerPrefix)] = value
+		}
+	}
 
 	return ports.IndexedDocument{
 		ID:         documentID,
 		Path:       blob.Path,
-		Content:    append([]byte(nil), blob.Content...),
+		Kind:       kind,
+		Title:      title.String(),
+		CreatedAt:  createdAt,
 		Attributes: attributes,
 	}, true, nil
 }

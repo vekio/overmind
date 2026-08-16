@@ -47,7 +47,7 @@ func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 	if result.ID.String() == "" {
 		t.Fatal("CreatePage.Handle() returned an empty ID")
 	}
-	content, err := os.ReadFile(filepath.Join(root, "knowledge", "first-page.adoc"))
+	content, err := os.ReadFile(filepath.Join(root, "page", "knowledge", "first-page.adoc"))
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
@@ -58,7 +58,7 @@ func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDocument.Handle() error = %v", err)
 	}
-	if indexed.Attributes["overmind-area"] != "knowledge" || string(indexed.Content) != string(content) {
+	if indexed.Path != "page/knowledge/first-page.adoc" || indexed.Kind != "page" || indexed.Title != "First page" || indexed.Attributes["area"] != "knowledge" || string(indexed.Content) != string(content) {
 		t.Fatalf("indexed document = %+v", indexed)
 	}
 }

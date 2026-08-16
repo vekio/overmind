@@ -1,4 +1,4 @@
-// Package uuidgenerator implements identifier generation using UUID v4.
+// Package uuidgenerator implements identifier generation using UUID v7.
 package uuidgenerator
 
 import (
@@ -9,15 +9,15 @@ import (
 
 var _ ports.IDGenerator = Generator{}
 
-// Generator creates UUID v4 identifiers.
+// Generator creates time-ordered UUID v7 identifiers.
 type Generator struct{}
 
 // New creates a UUID generator.
 func New() Generator { return Generator{} }
 
-// Generate returns a new UUID v4 identifier.
+// Generate returns a new UUID v7 identifier.
 func (Generator) Generate() (string, error) {
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return "", err
 	}

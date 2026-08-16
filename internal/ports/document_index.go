@@ -3,6 +3,7 @@ package ports
 import (
 	"context"
 	"errors"
+	"time"
 
 	"git.casta.me/alberto/overmind/internal/domain"
 )
@@ -14,7 +15,9 @@ var ErrIndexedDocumentNotFound = errors.New("indexed document not found")
 type IndexedDocument struct {
 	ID         domain.DocumentID
 	Path       string
-	Content    []byte
+	Kind       domain.DocumentKind
+	Title      string
+	CreatedAt  time.Time
 	Attributes map[string]string
 }
 

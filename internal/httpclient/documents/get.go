@@ -8,6 +8,7 @@ import (
 	"io"
 	stdhttp "net/http"
 	"net/url"
+	"time"
 
 	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/app/getdocument"
@@ -35,6 +36,9 @@ func NewGetHandler(client *httpclient.Client) *GetHandler {
 type getResponse struct {
 	ID         string            `json:"id"`
 	Path       string            `json:"path"`
+	Kind       string            `json:"kind"`
+	Title      string            `json:"title"`
+	CreatedAt  time.Time         `json:"createdAt"`
 	Content    string            `json:"content"`
 	Attributes map[string]string `json:"attributes"`
 }
@@ -76,9 +80,16 @@ func (handler *GetHandler) Handle(ctx context.Context, query getdocument.GetDocu
 	if err != nil {
 		return getdocument.GetDocumentResult{}, fmt.Errorf("decode get document id: %w", err)
 	}
+	kind, err := domain.NewDocumentKind(output.Kind)
+	if err != nil {
+		return getdocument.GetDocumentResult{}, fmt.Errorf("decode get document kind: %w", err)
+	}
 	return getdocument.GetDocumentResult{
 		ID:         documentID,
 		Path:       output.Path,
+		Kind:       kind,
+		Title:      output.Title,
+		CreatedAt:  output.CreatedAt,
 		Content:    []byte(output.Content),
 		Attributes: output.Attributes,
 	}, nil

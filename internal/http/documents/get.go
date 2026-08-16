@@ -3,6 +3,7 @@ package documents
 import (
 	"errors"
 	stdhttp "net/http"
+	"time"
 
 	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/app/getdocument"
@@ -14,6 +15,9 @@ import (
 type getResponse struct {
 	ID         string            `json:"id"`
 	Path       string            `json:"path"`
+	Kind       string            `json:"kind"`
+	Title      string            `json:"title"`
+	CreatedAt  time.Time         `json:"createdAt"`
 	Content    string            `json:"content"`
 	Attributes map[string]string `json:"attributes"`
 }
@@ -27,7 +31,7 @@ func handleGet(handler app.GetDocumentHandler) stdhttp.HandlerFunc {
 		result, err := handler.Handle(request.Context(), getdocument.GetDocumentQuery{ID: request.PathValue("id")})
 		if err != nil {
 			switch {
-			case errors.Is(err, ports.ErrIndexedDocumentNotFound):
+			case errors.Is(err, ports.ErrIndexedDocumentNotFound), errors.Is(err, ports.ErrBlobNotFound):
 				httpresponse.Error(response, stdhttp.StatusNotFound, "document not found")
 			case errors.Is(err, domain.ErrInvalidDocumentID):
 				httpresponse.Error(response, stdhttp.StatusBadRequest, "invalid document id")
@@ -40,6 +44,9 @@ func handleGet(handler app.GetDocumentHandler) stdhttp.HandlerFunc {
 		httpresponse.JSON(response, stdhttp.StatusOK, getResponse{
 			ID:         result.ID.String(),
 			Path:       result.Path,
+			Kind:       result.Kind.String(),
+			Title:      result.Title,
+			CreatedAt:  result.CreatedAt,
 			Content:    string(result.Content),
 			Attributes: result.Attributes,
 		})

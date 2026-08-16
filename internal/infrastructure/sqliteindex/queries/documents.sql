@@ -1,5 +1,5 @@
 -- name: GetDocumentByID :one
-SELECT id, path, content
+SELECT id, path, kind, title, created_at
 FROM documents
 WHERE id = ?;
 
@@ -10,11 +10,13 @@ WHERE document_id = ?
 ORDER BY name;
 
 -- name: UpsertDocument :exec
-INSERT INTO documents (id, path, content)
-VALUES (?, ?, ?)
+INSERT INTO documents (id, path, kind, title, created_at)
+VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     path = excluded.path,
-    content = excluded.content;
+    kind = excluded.kind,
+    title = excluded.title,
+    created_at = excluded.created_at;
 
 -- name: DeleteDocumentAttributes :exec
 DELETE FROM document_attributes

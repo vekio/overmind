@@ -133,7 +133,7 @@ func newLocalApplication(deps localDeps) *app.Application {
 			RebuildIndex: rebuildindex.NewRebuildIndexHandler(deps.Blobs, deps.Index),
 		},
 		Queries: app.Queries{
-			GetDocument: getdocument.NewGetDocumentHandler(deps.Index),
+			GetDocument: getdocument.NewGetDocumentHandler(deps.Index, deps.Blobs),
 		},
 	}
 }

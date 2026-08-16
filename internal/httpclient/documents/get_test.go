@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"git.casta.me/alberto/overmind/internal/app/getdocument"
-	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/httpclient"
 )
 
@@ -18,7 +17,7 @@ func TestGetHandlerCallsRemoteAPI(t *testing.T) {
 			t.Fatalf("request = %s %s", request.Method, request.URL.Path)
 		}
 		response.Header().Set("Content-Type", "application/json")
-		_, _ = response.Write([]byte(`{"id":"page-id","path":"page.adoc","content":"= Page\n","attributes":{"overmind-type":"page"}}`))
+		_, _ = response.Write([]byte(`{"id":"page-id","path":"page/page.adoc","kind":"page","title":"Page","createdAt":"2026-08-16T10:00:00Z","content":"= Page\n","attributes":{"area":"knowledge"}}`))
 	}))
 	defer server.Close()
 
@@ -30,7 +29,7 @@ func TestGetHandlerCallsRemoteAPI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
-	if result.ID.String() != "page-id" || result.Path != "page.adoc" || string(result.Content) != "= Page\n" || result.Attributes[domain.AttributeType] != "page" {
+	if result.ID.String() != "page-id" || result.Path != "page/page.adoc" || result.Kind != "page" || result.Title != "Page" || string(result.Content) != "= Page\n" || result.Attributes["area"] != "knowledge" {
 		t.Fatalf("Handle() = %+v", result)
 	}
 }

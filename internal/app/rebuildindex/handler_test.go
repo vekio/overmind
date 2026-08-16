@@ -21,7 +21,7 @@ func (index *indexWriterStub) ReplaceAll(_ context.Context, documents []ports.In
 func TestHandlerRebuildsManagedDocuments(t *testing.T) {
 	blobs := localfs.New(t.TempDir())
 	for _, blob := range []ports.Blob{
-		{Path: "page.adoc", Content: []byte("= Page\n:overmind-id: page-id\n:overmind-type: page\n:overmind-area: knowledge\n:unrelated: ignored\n\nBody\n")},
+		{Path: "page.adoc", Content: []byte("= Page\n:overmind-id: page-id\n:overmind-type: page\n:overmind-title: Page\n:overmind-area: knowledge\n:overmind-created-at: 2026-08-16T10:00:00Z\n:unrelated: ignored\n\nBody\n")},
 		{Path: "unmanaged.adoc", Content: []byte("= External document\n\nBody\n")},
 	} {
 		if err := blobs.Create(context.Background(), blob); err != nil {
@@ -38,7 +38,7 @@ func TestHandlerRebuildsManagedDocuments(t *testing.T) {
 		t.Fatalf("result = %+v, indexed = %d", result, len(index.documents))
 	}
 	document := index.documents[0]
-	if document.ID.String() != "page-id" || document.Attributes["overmind-area"] != "knowledge" {
+	if document.ID.String() != "page-id" || document.Kind != "page" || document.Title != "Page" || document.Attributes["area"] != "knowledge" {
 		t.Fatalf("indexed document = %+v", document)
 	}
 	if _, exists := document.Attributes["unrelated"]; exists {

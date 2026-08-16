@@ -2,7 +2,9 @@
 CREATE TABLE documents (
     id TEXT PRIMARY KEY NOT NULL,
     path TEXT NOT NULL UNIQUE,
-    content BLOB NOT NULL
+    kind TEXT NOT NULL,
+    title TEXT NOT NULL,
+    created_at TEXT NOT NULL
 );
 
 CREATE TABLE document_attributes (
@@ -16,6 +18,10 @@ CREATE TABLE document_attributes (
 CREATE INDEX document_attributes_name_value_idx
     ON document_attributes(name, value);
 
+CREATE INDEX documents_kind_path_id_idx
+    ON documents(kind, path, id);
+
 -- +goose Down
+DROP INDEX documents_kind_path_id_idx;
 DROP TABLE document_attributes;
 DROP TABLE documents;

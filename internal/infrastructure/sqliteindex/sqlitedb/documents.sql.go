@@ -29,7 +29,7 @@ func (q *Queries) DeleteDocumentAttributes(ctx context.Context, documentID strin
 }
 
 const getDocumentByID = `-- name: GetDocumentByID :one
-SELECT id, path, content
+SELECT id, path, kind, title, created_at
 FROM documents
 WHERE id = ?
 `
@@ -37,7 +37,13 @@ WHERE id = ?
 func (q *Queries) GetDocumentByID(ctx context.Context, id string) (Document, error) {
 	row := q.db.QueryRowContext(ctx, getDocumentByID, id)
 	var i Document
-	err := row.Scan(&i.ID, &i.Path, &i.Content)
+	err := row.Scan(
+		&i.ID,
+		&i.Path,
+		&i.Kind,
+		&i.Title,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
@@ -93,20 +99,30 @@ func (q *Queries) ListDocumentAttributes(ctx context.Context, documentID string)
 }
 
 const upsertDocument = `-- name: UpsertDocument :exec
-INSERT INTO documents (id, path, content)
-VALUES (?, ?, ?)
+INSERT INTO documents (id, path, kind, title, created_at)
+VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     path = excluded.path,
-    content = excluded.content
+    kind = excluded.kind,
+    title = excluded.title,
+    created_at = excluded.created_at
 `
 
 type UpsertDocumentParams struct {
-	ID      string `db:"id"`
-	Path    string `db:"path"`
-	Content []byte `db:"content"`
+	ID        string `db:"id"`
+	Path      string `db:"path"`
+	Kind      string `db:"kind"`
+	Title     string `db:"title"`
+	CreatedAt string `db:"created_at"`
 }
 
 func (q *Queries) UpsertDocument(ctx context.Context, arg UpsertDocumentParams) error {
-	_, err := q.db.ExecContext(ctx, upsertDocument, arg.ID, arg.Path, arg.Content)
+	_, err := q.db.ExecContext(ctx, upsertDocument,
+		arg.ID,
+		arg.Path,
+		arg.Kind,
+		arg.Title,
+		arg.CreatedAt,
+	)
 	return err
 }

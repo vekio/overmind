@@ -5,34 +5,26 @@ import "time"
 
 // Page is an AsciiDoc page stored in the knowledge base.
 type Page struct {
-	id        DocumentID
-	title     Title
-	area      Area
-	createdAt time.Time
+	metadata Metadata
+	area     Area
 }
 
 // NewPage creates a Page from validated value objects.
 func NewPage(id DocumentID, title Title, area Area, createdAt time.Time) Page {
-	if id.String() == "" {
-		panic("page requires document id")
-	}
-	if title.IsZero() {
-		panic("page requires title")
-	}
-	if createdAt.IsZero() {
-		panic("page requires creation time")
-	}
-	return Page{id: id, title: title, area: area, createdAt: createdAt}
+	return Page{metadata: newMetadata(id, DocumentKindPage, title, createdAt), area: area}
 }
 
 // ID returns the page's stable document identifier.
-func (page Page) ID() DocumentID { return page.id }
+func (page Page) ID() DocumentID { return page.metadata.ID() }
+
+// Kind returns the document kind.
+func (page Page) Kind() DocumentKind { return page.metadata.Kind() }
 
 // Title returns the page title.
-func (page Page) Title() Title { return page.title }
+func (page Page) Title() Title { return page.metadata.Title() }
 
 // Area returns the page area.
 func (page Page) Area() Area { return page.area }
 
 // CreatedAt returns when the page was created.
-func (page Page) CreatedAt() time.Time { return page.createdAt }
+func (page Page) CreatedAt() time.Time { return page.metadata.CreatedAt() }

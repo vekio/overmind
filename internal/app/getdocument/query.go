@@ -1,7 +1,11 @@
 // Package getdocument implements the query for retrieving an indexed document.
 package getdocument
 
-import "git.casta.me/alberto/overmind/internal/domain"
+import (
+	"time"
+
+	"git.casta.me/alberto/overmind/internal/domain"
+)
 
 // GetDocumentQuery identifies the document to retrieve.
 type GetDocumentQuery struct {
@@ -12,6 +16,9 @@ type GetDocumentQuery struct {
 type GetDocumentResult struct {
 	ID         domain.DocumentID
 	Path       string
+	Kind       domain.DocumentKind
+	Title      string
+	CreatedAt  time.Time
 	Content    []byte
 	Attributes map[string]string
 }

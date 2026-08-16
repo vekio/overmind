@@ -8,15 +8,6 @@ import (
 
 var ErrInvalidDocumentID = errors.New("invalid document id")
 
-const (
-	AttributePrefix    = "overmind-"
-	AttributeID        = AttributePrefix + "id"
-	AttributeType      = AttributePrefix + "type"
-	AttributeTitle     = AttributePrefix + "title"
-	AttributeArea      = AttributePrefix + "area"
-	AttributeCreatedAt = AttributePrefix + "created-at"
-)
-
 // DocumentID identifies a domain object represented by an AsciiDoc document.
 // Its zero value is invalid.
 type DocumentID struct {

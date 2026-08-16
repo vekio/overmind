@@ -17,6 +17,9 @@ func TestNewPageComposesValidatedValues(t *testing.T) {
 	if page.ID().String() != "page-id" {
 		t.Fatalf("Page.ID() = %q, want %q", page.ID(), "page-id")
 	}
+	if page.Kind() != DocumentKindPage {
+		t.Fatalf("Page.Kind() = %q, want %q", page.Kind(), "page")
+	}
 	if page.Title().String() != "Mi página" || page.Title().Slug() != "mi-pagina" {
 		t.Fatalf("Page.Title() = value %q, slug %q", page.Title(), page.Title().Slug())
 	}

@@ -29,6 +29,15 @@ type idGeneratorStub struct{ id string }
 
 func (generator idGeneratorStub) Generate() (string, error) { return generator.id, nil }
 
+type countingIDGenerator struct {
+	calls int
+}
+
+func (generator *countingIDGenerator) Generate() (string, error) {
+	generator.calls++
+	return "page-id", nil
+}
+
 type clockStub struct{ now time.Time }
 
 func (clock clockStub) Now() time.Time { return clock.now }
@@ -65,22 +74,22 @@ func TestHandlerRendersAndPersistsANewPage(t *testing.T) {
 	if result.ID.String() != "page-id" {
 		t.Fatalf("Handle() ID = %q, want %q", result.ID, "page-id")
 	}
-	if renderer.name != pageTemplate {
-		t.Fatalf("Render() name = %q, want %q", renderer.name, pageTemplate)
+	if renderer.name != "page" {
+		t.Fatalf("Render() name = %q, want %q", renderer.name, "page")
 	}
 	page, ok := renderer.data.(domain.Page)
 	if !ok || page.Title().String() != "First page" || page.Title().Slug() != "first-page" || page.Area().String() != "knowledge/go" || page.ID().String() != "page-id" || !page.CreatedAt().Equal(createdAt) {
 		t.Fatalf("Render() data = %#v", renderer.data)
 	}
 
-	content, err := os.ReadFile(filepath.Join(root, "knowledge", "go", "first-page.adoc"))
+	content, err := os.ReadFile(filepath.Join(root, "page", "knowledge", "go", "first-page.adoc"))
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
 	if string(content) != "rendered page" {
 		t.Fatalf("stored content = %q", content)
 	}
-	if index.document.ID.String() != "page-id" || index.document.Path != "knowledge/go/first-page.adoc" || index.document.Attributes[domain.AttributeTitle] != "First page" {
+	if index.document.ID.String() != "page-id" || index.document.Path != "page/knowledge/go/first-page.adoc" || index.document.Kind != domain.DocumentKindPage || index.document.Title != "First page" || index.document.Attributes["area"] != "knowledge/go" {
 		t.Fatalf("indexed document = %+v", index.document)
 	}
 }
@@ -98,7 +107,7 @@ func TestHandlerDoesNotReplaceExistingPage(t *testing.T) {
 	}
 }
 
-func TestHandlerSavesPageWithoutAreaAtStoreRoot(t *testing.T) {
+func TestHandlerSavesPageWithoutAreaUnderTypeDirectory(t *testing.T) {
 	for name, area := range map[string]string{
 		"omitted":     "",
 		"blank value": "   ",
@@ -110,8 +119,8 @@ func TestHandlerSavesPageWithoutAreaAtStoreRoot(t *testing.T) {
 			if _, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Root page", Area: area}); err != nil {
 				t.Fatalf("Handle() error = %v", err)
 			}
-			if _, err := os.Stat(filepath.Join(root, "root-page.adoc")); err != nil {
-				t.Fatalf("Stat(root-page.adoc) error = %v", err)
+			if _, err := os.Stat(filepath.Join(root, "page", "root-page.adoc")); err != nil {
+				t.Fatalf("Stat(page/root-page.adoc) error = %v", err)
 			}
 		})
 	}
@@ -130,8 +139,8 @@ func TestHandlerRemovesBlobWhenIndexingFails(t *testing.T) {
 	if _, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"}); err == nil {
 		t.Fatal("Handle() error = nil")
 	}
-	if _, err := os.Stat(filepath.Join(root, "page.adoc")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("Stat(page.adoc) error = %v, want not exist", err)
+	if _, err := os.Stat(filepath.Join(root, "page", "page.adoc")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Stat(page/page.adoc) error = %v, want not exist", err)
 	}
 }
 
@@ -147,6 +156,18 @@ func TestHandlerUsesDomainValidation(t *testing.T) {
 				t.Fatalf("Handle() error = %v", err)
 			}
 		})
+	}
+}
+
+func TestHandlerValidatesCommandBeforeGeneratingID(t *testing.T) {
+	ids := &countingIDGenerator{}
+	handler := NewCreatePageHandler(localfs.New(t.TempDir()), &rendererStub{}, ids, clockStub{now: createdAt}, &indexWriterStub{})
+
+	if _, err := handler.Handle(context.Background(), CreatePageCommand{}); err == nil {
+		t.Fatal("Handle() error = nil")
+	}
+	if ids.calls != 0 {
+		t.Fatalf("Generate() calls = %d, want 0", ids.calls)
 	}
 }
 

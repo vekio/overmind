@@ -6,6 +6,7 @@ import (
 	stdhttp "net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"git.casta.me/alberto/overmind/internal/app/getdocument"
 	"git.casta.me/alberto/overmind/internal/domain"
@@ -31,13 +32,16 @@ func documentRoutes(handler *getHandlerStub) stdhttp.Handler {
 
 func TestGet(t *testing.T) {
 	id, _ := domain.NewDocumentID("page-id")
+	createdAt := time.Date(2026, time.August, 16, 10, 0, 0, 0, time.UTC)
 	handler := &getHandlerStub{result: getdocument.GetDocumentResult{
-		ID:      id,
-		Path:    "knowledge/page.adoc",
-		Content: []byte("= Page\n"),
+		ID:        id,
+		Path:      "page/knowledge/page.adoc",
+		Kind:      "page",
+		Title:     "Page",
+		CreatedAt: createdAt,
+		Content:   []byte("= Page\n"),
 		Attributes: map[string]string{
-			domain.AttributeType: "page",
-			domain.AttributeArea: "knowledge",
+			"area": "knowledge",
 		},
 	}}
 	request := httptest.NewRequest(stdhttp.MethodGet, "/documents/page-id", nil)
@@ -51,7 +55,7 @@ func TestGet(t *testing.T) {
 	if handler.query.ID != "page-id" {
 		t.Fatalf("query = %+v", handler.query)
 	}
-	want := "{\"id\":\"page-id\",\"path\":\"knowledge/page.adoc\",\"content\":\"= Page\\n\",\"attributes\":{\"overmind-area\":\"knowledge\",\"overmind-type\":\"page\"}}\n"
+	want := "{\"id\":\"page-id\",\"path\":\"page/knowledge/page.adoc\",\"kind\":\"page\",\"title\":\"Page\",\"createdAt\":\"2026-08-16T10:00:00Z\",\"content\":\"= Page\\n\",\"attributes\":{\"area\":\"knowledge\"}}\n"
 	if response.Body.String() != want {
 		t.Fatalf("body = %q, want %q", response.Body.String(), want)
 	}
@@ -62,9 +66,10 @@ func TestGetMapsErrors(t *testing.T) {
 		err    error
 		status int
 	}{
-		"invalid id": {err: domain.ErrInvalidDocumentID, status: stdhttp.StatusBadRequest},
-		"not found":  {err: ports.ErrIndexedDocumentNotFound, status: stdhttp.StatusNotFound},
-		"internal":   {err: errors.New("failure"), status: stdhttp.StatusInternalServerError},
+		"invalid id":     {err: domain.ErrInvalidDocumentID, status: stdhttp.StatusBadRequest},
+		"not found":      {err: ports.ErrIndexedDocumentNotFound, status: stdhttp.StatusNotFound},
+		"missing source": {err: ports.ErrBlobNotFound, status: stdhttp.StatusNotFound},
+		"internal":       {err: errors.New("failure"), status: stdhttp.StatusInternalServerError},
 	} {
 		t.Run(name, func(t *testing.T) {
 			request := httptest.NewRequest(stdhttp.MethodGet, "/documents/page-id", nil)

@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestGeneratorReturnsUUIDV4(t *testing.T) {
+func TestGeneratorReturnsUUIDV7(t *testing.T) {
 	generated, err := New().Generate()
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
@@ -16,7 +16,7 @@ func TestGeneratorReturnsUUIDV4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("uuid.Parse(%q) error = %v", generated, err)
 	}
-	if got, want := id.Version(), uuid.Version(4); got != want {
+	if got, want := id.Version(), uuid.Version(7); got != want {
 		t.Fatalf("UUID version = %v, want %v", got, want)
 	}
 	if got, want := id.Variant(), uuid.RFC4122; got != want {
