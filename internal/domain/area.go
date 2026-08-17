@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 )
@@ -17,7 +18,7 @@ type Area struct {
 func NewArea(raw string) (Area, error) {
 	v := strings.TrimSpace(raw)
 	if v == "" {
-		return Area{}, ErrInvalidArea
+		return Area{}, fmt.Errorf("%w: value is required", ErrInvalidArea)
 	}
 
 	parts := strings.Split(v, "/")
@@ -26,14 +27,14 @@ func NewArea(raw string) (Area, error) {
 
 func buildArea(parts []string) (Area, error) {
 	if len(parts) == 0 {
-		return Area{}, ErrInvalidArea
+		return Area{}, fmt.Errorf("%w: value is required", ErrInvalidArea)
 	}
 
 	segments := make([]string, 0, len(parts))
-	for _, part := range parts {
+	for index, part := range parts {
 		slug := Slugify(part)
 		if slug == "" {
-			return Area{}, ErrInvalidArea
+			return Area{}, fmt.Errorf("%w: segment %d must contain a letter or number", ErrInvalidArea, index+1)
 		}
 
 		segments = append(segments, slug)

@@ -1,3 +1,6 @@
+set unstable
+set lists
+
 binary_name := "overmind"
 build_dir := "bin"
 main_package := "./cmd/overmind"
@@ -80,10 +83,10 @@ build: check
 install: check
     go install {{ main_package }}
 
-# Run the CLI; pass arguments after `--`
+# Run the CLI; pass arguments directly after `run`
 [group('development')]
 run *args:
-    go run {{ main_package }} --config {{ development_config }} {{ replace(args, "-- ", "") }}
+    go run {{ main_package }} --config {{ development_config }} {{ quote(args) }}
 
 # Remove build artifacts
 [group('artifacts')]

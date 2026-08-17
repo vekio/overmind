@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -16,12 +17,15 @@ type Title struct {
 // NewTitle creates a normalized Title.
 func NewTitle(raw string) (Title, error) {
 	value := strings.TrimSpace(raw)
-	if value == "" || strings.ContainsAny(value, "\r\n") {
-		return Title{}, ErrInvalidTitle
+	if value == "" {
+		return Title{}, fmt.Errorf("%w: value is required", ErrInvalidTitle)
+	}
+	if strings.ContainsAny(value, "\r\n") {
+		return Title{}, fmt.Errorf("%w: value must be a single line", ErrInvalidTitle)
 	}
 	slug := Slugify(value)
 	if slug == "" {
-		return Title{}, ErrInvalidTitle
+		return Title{}, fmt.Errorf("%w: value must contain a letter or number", ErrInvalidTitle)
 	}
 
 	return Title{value: value, slug: slug}, nil

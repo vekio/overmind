@@ -2,15 +2,19 @@
 package pages
 
 import (
+	"log/slog"
 	stdhttp "net/http"
 
 	"git.casta.me/alberto/overmind/internal/app"
 )
 
 // Register adds page routes to mux.
-func Register(mux *stdhttp.ServeMux, createPage app.CreatePageHandler) {
+func Register(mux *stdhttp.ServeMux, createPage app.CreatePageHandler, logger *slog.Logger) {
 	if mux == nil {
 		panic("page routes require HTTP mux")
 	}
-	mux.HandleFunc("POST /pages", handleCreate(createPage))
+	if logger == nil {
+		panic("page routes require logger")
+	}
+	mux.HandleFunc("POST /pages", handleCreate(createPage, logger))
 }

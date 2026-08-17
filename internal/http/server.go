@@ -38,7 +38,7 @@ func NewServer(address string, application *app.Application, logger *slog.Logger
 	return &Server{
 		server: &stdhttp.Server{
 			Addr:              address,
-			Handler:           middleware.Logger(httpLogger)(routes(application)),
+			Handler:           middleware.Logger(httpLogger)(routes(application, httpLogger)),
 			ReadHeaderTimeout: 5 * time.Second,
 			IdleTimeout:       60 * time.Second,
 		},

@@ -11,6 +11,14 @@ func configFlag() urfavecli.Flag {
 	}
 }
 
+func debugFlag() urfavecli.Flag {
+	return &urfavecli.BoolFlag{
+		Name:    "debug",
+		Usage:   "show diagnostic logs",
+		Sources: urfavecli.EnvVars("OVERMIND_DEBUG"),
+	}
+}
+
 func tagFlag() urfavecli.Flag {
 	return &urfavecli.StringSliceFlag{
 		Name:    "tag",

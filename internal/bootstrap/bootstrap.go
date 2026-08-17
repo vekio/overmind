@@ -63,7 +63,7 @@ func NewContainer(cfg config.Config) (*Container, error) {
 		return nil, err
 	}
 
-	application, closer, err := newConfiguredApplication(cfg)
+	application, closer, err := newConfiguredApplication(cfg, log)
 	if err != nil {
 		return nil, err
 	}
@@ -76,14 +76,14 @@ func NewContainer(cfg config.Config) (*Container, error) {
 	}, nil
 }
 
-func newConfiguredApplication(cfg config.Config) (*app.Application, io.Closer, error) {
+func newConfiguredApplication(cfg config.Config, logger *slog.Logger) (*app.Application, io.Closer, error) {
 	switch cfg.CLI.Mode {
 	case config.CLIModeLocal:
 		deps, err := newLocalDeps(cfg)
 		if err != nil {
 			return nil, nil, err
 		}
-		return newLocalApplication(deps), deps.Closer, nil
+		return newLocalApplication(deps, logger), deps.Closer, nil
 	case config.CLIModeRemote:
 		client, err := newOvermindClient(cfg.CLI)
 		if err != nil {
@@ -120,7 +120,7 @@ func newLocalDeps(cfg config.Config) (localDeps, error) {
 	}, nil
 }
 
-func newLocalApplication(deps localDeps) *app.Application {
+func newLocalApplication(deps localDeps, logger *slog.Logger) *app.Application {
 	return &app.Application{
 		Commands: app.Commands{
 			CreatePage: createpage.NewCreatePageHandler(
@@ -129,6 +129,7 @@ func newLocalApplication(deps localDeps) *app.Application {
 				deps.IDs,
 				deps.Clock,
 				deps.Index,
+				logger.With("component", "createpage"),
 			),
 			RebuildIndex: rebuildindex.NewRebuildIndexHandler(deps.Blobs, deps.Index),
 		},

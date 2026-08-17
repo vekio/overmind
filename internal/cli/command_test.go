@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"os"
@@ -20,6 +21,7 @@ import (
 
 type createPageHandlerStub struct {
 	command createpage.CreatePageCommand
+	err     error
 }
 
 type getDocumentHandlerStub struct {
@@ -56,8 +58,55 @@ func (runtime runtimeStub) Close() error { return nil }
 
 func (handler *createPageHandlerStub) Handle(_ context.Context, command createpage.CreatePageCommand) (createpage.CreatePageResult, error) {
 	handler.command = command
+	if handler.err != nil {
+		return createpage.CreatePageResult{}, handler.err
+	}
 	id, err := domain.NewDocumentID("page-id")
-	return createpage.CreatePageResult{ID: id}, err
+	return createpage.CreatePageResult{ID: id, Path: "page/knowledge/go/first-page.adoc"}, err
+}
+
+func TestCreatePagePresentsExistingPageConflict(t *testing.T) {
+	handler := &createPageHandlerStub{err: &createpage.PageAlreadyExistsError{Path: "page/home/page.adoc"}}
+	state := &applicationState{runtime: runtimeStub{application: &app.Application{
+		Commands: app.Commands{CreatePage: handler},
+	}}}
+
+	err := newPageCommand(state).Run(context.Background(), []string{"page", "Page"})
+	if err == nil || !errors.Is(err, createpage.ErrPageAlreadyExists) || !strings.Contains(err.Error(), `page already exists at "page/home/page.adoc"`) || !strings.Contains(err.Error(), "different title or area") {
+		t.Fatalf("Run() error = %v", err)
+	}
+}
+
+func TestCreatePagePresentsIncompleteCreationRecovery(t *testing.T) {
+	handler := &createPageHandlerStub{err: createpage.NewPageCreationIncompleteError("page/home/page.adoc")}
+	state := &applicationState{runtime: runtimeStub{application: &app.Application{
+		Commands: app.Commands{CreatePage: handler},
+	}}}
+
+	err := newPageCommand(state).Run(context.Background(), []string{"page", "Page"})
+	if err == nil || !errors.Is(err, createpage.ErrPageCreationIncomplete) || !strings.Contains(err.Error(), "check the document") || !strings.Contains(err.Error(), "overmind index rebuild") {
+		t.Fatalf("Run() error = %v", err)
+	}
+}
+
+func TestCreatePageHidesInternalErrorsByDefault(t *testing.T) {
+	err := presentCreatePageError(errors.New("template /secret/path is missing"))
+	if strings.Contains(err.Error(), "/secret/path") || !strings.Contains(err.Error(), "internal error") || !strings.Contains(err.Error(), "--debug") {
+		t.Fatalf("presentCreatePageError() = %v", err)
+	}
+}
+
+func TestCreatePagePresentsValidationErrors(t *testing.T) {
+	for cause, message := range map[error]string{
+		domain.ErrInvalidTitle: "invalid page title",
+		domain.ErrInvalidArea:  "invalid page area",
+		domain.ErrInvalidTag:   "invalid page tag",
+		domain.ErrDuplicateTag: "duplicate page tag",
+	} {
+		if got := presentCreatePageError(cause).Error(); got != message {
+			t.Fatalf("presentCreatePageError(%v) = %q, want %q", cause, got, message)
+		}
+	}
 }
 
 func TestCreatePageLoadsConfigAndExecutesUseCase(t *testing.T) {
@@ -83,7 +132,7 @@ logging:
 	command.Writer = &output
 
 	err := command.Run(context.Background(), []string{
-		"overmind", "--config", configPath,
+		"overmind", "--config", configPath, "--debug",
 		"page", "First page", "--area", "Knowledge/Go", "--tag", "Go", "--tag", "DDD",
 	})
 	if err != nil {
@@ -92,18 +141,28 @@ logging:
 	if selectedConfig.Vault.RootPath != "./vault" {
 		t.Fatalf("selected root = %q", selectedConfig.Vault.RootPath)
 	}
+	if selectedConfig.Logging.Level != "debug" {
+		t.Fatalf("selected logging level = %q", selectedConfig.Logging.Level)
+	}
 	if handler.command.Title != "First page" || handler.command.Area != "Knowledge/Go" || len(handler.command.Tags) != 2 || handler.command.Tags[0] != "Go" || handler.command.Tags[1] != "DDD" {
 		t.Fatalf("use-case command = %+v", handler.command)
 	}
-	if output.String() != "page-id\n" {
+	if output.String() != "page/knowledge/go/first-page.adoc\n" {
 		t.Fatalf("output = %q", output.String())
 	}
 }
 
 func TestCreatePageRequiresTitleArgument(t *testing.T) {
 	err := newPageCommand(&applicationState{}).Run(context.Background(), []string{"page"})
-	if err == nil || !strings.Contains(err.Error(), "title") {
+	if err == nil || !strings.Contains(err.Error(), "missing TITLE") || !strings.Contains(err.Error(), "overmind page --help") {
 		t.Fatalf("Run() error = %v, want missing title error", err)
+	}
+}
+
+func TestCreatePageRejectsArgumentsAfterTitle(t *testing.T) {
+	err := newPageCommand(&applicationState{}).Run(context.Background(), []string{"page", "First", "page"})
+	if err == nil || !strings.Contains(err.Error(), "unexpected arguments") || !strings.Contains(err.Error(), "quote titles containing spaces") || !strings.Contains(err.Error(), "overmind page --help") {
+		t.Fatalf("Run() error = %v, want unexpected arguments error", err)
 	}
 }
 

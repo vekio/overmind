@@ -1,68 +1,23 @@
 package createpage
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
+	"log/slog"
 	"strings"
 	"testing"
-	"time"
 
 	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/infrastructure/localfs"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
 
-type rendererStub struct {
-	name string
-	data any
-}
-
-func (renderer *rendererStub) Render(_ context.Context, name string, data any) ([]byte, error) {
-	renderer.name = name
-	renderer.data = data
-	return []byte("rendered page"), nil
-}
-
-type idGeneratorStub struct{ id string }
-
-func (generator idGeneratorStub) Generate() (string, error) { return generator.id, nil }
-
-type countingIDGenerator struct {
-	calls int
-}
-
-func (generator *countingIDGenerator) Generate() (string, error) {
-	generator.calls++
-	return "page-id", nil
-}
-
-type clockStub struct{ now time.Time }
-
-func (clock clockStub) Now() time.Time { return clock.now }
-
-var createdAt = time.Date(2026, time.August, 14, 10, 30, 0, 0, time.UTC)
-
-type indexWriterStub struct {
-	document ports.IndexedDocument
-	err      error
-}
-
-func (index *indexWriterStub) Upsert(_ context.Context, document ports.IndexedDocument) error {
-	index.document = document
-	return index.err
-}
-
-func (index *indexWriterStub) ReplaceAll(context.Context, []ports.IndexedDocument) error {
-	return nil
-}
-
-func TestHandlerRendersAndPersistsANewPage(t *testing.T) {
-	root := t.TempDir()
+func TestHandlerCreatesPage(t *testing.T) {
+	blobs := &blobWriterStub{}
 	renderer := &rendererStub{}
+	ids := &idGeneratorStub{id: "page-id"}
 	index := &indexWriterStub{}
-	handler := NewCreatePageHandler(localfs.New(root), renderer, idGeneratorStub{id: "page-id"}, clockStub{now: createdAt}, index)
+	handler := NewCreatePageHandler(blobs, renderer, ids, clockStub{now: testCreatedAt}, index, testLogger())
 
 	result, err := handler.Handle(context.Background(), CreatePageCommand{
 		Title: " First page ",
@@ -72,129 +27,145 @@ func TestHandlerRendersAndPersistsANewPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
-	if result.ID.String() != "page-id" {
-		t.Fatalf("Handle() ID = %q, want %q", result.ID, "page-id")
+	if result.ID.String() != "page-id" || result.Path != "page/knowledge/go/first-page.adoc" {
+		t.Fatalf("Handle() result = %+v", result)
 	}
-	if renderer.name != "page" {
-		t.Fatalf("Render() name = %q, want %q", renderer.name, "page")
+	if renderer.calls != 1 || renderer.name != "page" {
+		t.Fatalf("renderer calls = %d, name = %q", renderer.calls, renderer.name)
 	}
 	page, ok := renderer.data.(domain.Page)
-	if !ok || page.Title().String() != "First page" || page.Title().Slug() != "first-page" || page.Area().String() != "knowledge/go" || page.ID().String() != "page-id" || page.Tags().Len() != 2 || !page.CreatedAt().Equal(createdAt) {
+	if !ok || page.Title().String() != "First page" || page.Area().String() != "knowledge/go" || page.Tags().Len() != 2 {
 		t.Fatalf("Render() data = %#v", renderer.data)
 	}
-
-	content, err := os.ReadFile(filepath.Join(root, "page", "knowledge", "go", "first-page.adoc"))
-	if err != nil {
-		t.Fatalf("ReadFile() error = %v", err)
+	if blobs.createCalls != 1 || blobs.created.Path != result.Path || string(blobs.created.Content) != "rendered page" {
+		t.Fatalf("created blob = %+v, calls = %d", blobs.created, blobs.createCalls)
 	}
-	if string(content) != "rendered page" {
-		t.Fatalf("stored content = %q", content)
-	}
-	if index.document.ID.String() != "page-id" || index.document.Path != "page/knowledge/go/first-page.adoc" || index.document.Kind != domain.DocumentKindPage || index.document.Title != "First page" || len(index.document.Tags) != 2 || index.document.Attributes["area"] != "knowledge/go" {
-		t.Fatalf("indexed document = %+v", index.document)
+	if index.calls != 1 || index.document.Path != result.Path || index.document.ID != result.ID {
+		t.Fatalf("indexed document = %+v, calls = %d", index.document, index.calls)
 	}
 }
 
-func TestHandlerDoesNotReplaceExistingPage(t *testing.T) {
-	store := localfs.New(t.TempDir())
-	handler := NewCreatePageHandler(store, &rendererStub{}, idGeneratorStub{id: "page-id"}, clockStub{now: createdAt}, &indexWriterStub{})
-	command := CreatePageCommand{Title: "Page", Area: "Knowledge"}
+func TestHandlerTranslatesExistingBlobToPageConflict(t *testing.T) {
+	blobs := &blobWriterStub{createErr: ports.ErrBlobAlreadyExists}
+	handler := newTestHandler(blobs, &rendererStub{}, &idGeneratorStub{id: "page-id"}, &indexWriterStub{}, testLogger())
 
-	if _, err := handler.Handle(context.Background(), command); err != nil {
-		t.Fatalf("first Handle() error = %v", err)
+	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page", Area: "Knowledge"})
+	if !errors.Is(err, ErrPageAlreadyExists) {
+		t.Fatalf("Handle() error = %v, want %v", err, ErrPageAlreadyExists)
 	}
-	if _, err := handler.Handle(context.Background(), command); !errors.Is(err, ports.ErrBlobAlreadyExists) {
-		t.Fatalf("second Handle() error = %v, want %v", err, ports.ErrBlobAlreadyExists)
+	conflict, ok := errors.AsType[*PageAlreadyExistsError](err)
+	if !ok || conflict.Path != "page/knowledge/page.adoc" {
+		t.Fatalf("Handle() error = %#v", err)
+	}
+	if errors.Is(err, ports.ErrBlobAlreadyExists) {
+		t.Fatalf("storage error escaped the use case: %v", err)
 	}
 }
 
-func TestHandlerSavesPageWithoutAreaUnderTypeDirectory(t *testing.T) {
-	for name, area := range map[string]string{
-		"omitted":     "",
-		"blank value": "   ",
-	} {
+func TestHandlerStopsWhenRenderingFails(t *testing.T) {
+	renderErr := errors.New("template unavailable")
+	blobs := &blobWriterStub{}
+	index := &indexWriterStub{}
+	handler := newTestHandler(blobs, &rendererStub{err: renderErr}, &idGeneratorStub{id: "page-id"}, index, testLogger())
+
+	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"})
+	if !errors.Is(err, renderErr) || !strings.Contains(err.Error(), `render page "page/page.adoc"`) {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	if blobs.createCalls != 0 || index.calls != 0 {
+		t.Fatalf("blob calls = %d, index calls = %d", blobs.createCalls, index.calls)
+	}
+}
+
+func TestHandlerStopsWhenStorageFails(t *testing.T) {
+	storageErr := errors.New("disk unavailable")
+	blobs := &blobWriterStub{createErr: storageErr}
+	index := &indexWriterStub{}
+	handler := newTestHandler(blobs, &rendererStub{}, &idGeneratorStub{id: "page-id"}, index, testLogger())
+
+	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"})
+	if !errors.Is(err, storageErr) || !strings.Contains(err.Error(), `store page "page/page.adoc"`) {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	if index.calls != 0 {
+		t.Fatalf("index calls = %d, want 0", index.calls)
+	}
+}
+
+func TestHandlerRollsBackStoredPageWhenIndexingFails(t *testing.T) {
+	indexErr := errors.New("index unavailable")
+	blobs := &blobWriterStub{}
+	handler := newTestHandler(blobs, &rendererStub{}, &idGeneratorStub{id: "page-id"}, &indexWriterStub{err: indexErr}, testLogger())
+
+	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"})
+	if !errors.Is(err, indexErr) || !strings.Contains(err.Error(), `index page "page/page.adoc"`) {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	if blobs.deleteCalls != 1 || blobs.deletedPath != "page/page.adoc" {
+		t.Fatalf("Delete() path = %q, calls = %d", blobs.deletedPath, blobs.deleteCalls)
+	}
+}
+
+func TestHandlerReportsIncompleteCreationWhenRollbackFails(t *testing.T) {
+	indexErr := errors.New("index unavailable")
+	cleanupErr := errors.New("delete unavailable")
+	blobs := &blobWriterStub{deleteErr: cleanupErr}
+	handler := newTestHandler(blobs, &rendererStub{}, &idGeneratorStub{id: "page-id"}, &indexWriterStub{err: indexErr}, testLogger())
+
+	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"})
+	if !errors.Is(err, ErrPageCreationIncomplete) || !errors.Is(err, indexErr) || !errors.Is(err, cleanupErr) {
+		t.Fatalf("Handle() error = %v", err)
+	}
+	incomplete, ok := errors.AsType[*PageCreationIncompleteError](err)
+	if !ok || incomplete.Path != "page/page.adoc" {
+		t.Fatalf("Handle() error = %#v", err)
+	}
+}
+
+func TestHandlerLogsExpectedAndInternalFailuresAtDebugLevel(t *testing.T) {
+	tests := map[string]struct {
+		command CreatePageCommand
+		ids     *idGeneratorStub
+		render  *rendererStub
+		blobs   *blobWriterStub
+		want    string
+	}{
+		"validation":     {command: CreatePageCommand{}, ids: &idGeneratorStub{id: "page-id"}, render: &rendererStub{}, blobs: &blobWriterStub{}, want: "page validation failed"},
+		"initialization": {command: CreatePageCommand{Title: "Page"}, ids: &idGeneratorStub{err: errors.New("random source unavailable")}, render: &rendererStub{}, blobs: &blobWriterStub{}, want: "page initialization failed"},
+		"rendering":      {command: CreatePageCommand{Title: "Page"}, ids: &idGeneratorStub{id: "page-id"}, render: &rendererStub{err: errors.New("template unavailable")}, blobs: &blobWriterStub{}, want: "page rendering failed"},
+		"storage":        {command: CreatePageCommand{Title: "Page"}, ids: &idGeneratorStub{id: "page-id"}, render: &rendererStub{}, blobs: &blobWriterStub{createErr: errors.New("disk unavailable")}, want: "page storage failed"},
+		"existing":       {command: CreatePageCommand{Title: "Page"}, ids: &idGeneratorStub{id: "page-id"}, render: &rendererStub{}, blobs: &blobWriterStub{createErr: ports.ErrBlobAlreadyExists}, want: "page already exists"},
+	}
+
+	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			root := t.TempDir()
-			handler := NewCreatePageHandler(localfs.New(root), &rendererStub{}, idGeneratorStub{id: "page-id"}, clockStub{now: createdAt}, &indexWriterStub{})
+			var output bytes.Buffer
+			logger := slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug}))
+			handler := newTestHandler(test.blobs, test.render, test.ids, &indexWriterStub{}, logger)
 
-			if _, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Root page", Area: area}); err != nil {
-				t.Fatalf("Handle() error = %v", err)
-			}
-			if _, err := os.Stat(filepath.Join(root, "page", "root-page.adoc")); err != nil {
-				t.Fatalf("Stat(page/root-page.adoc) error = %v", err)
+			_, _ = handler.Handle(context.Background(), test.command)
+			if !strings.Contains(output.String(), `"level":"DEBUG"`) || !strings.Contains(output.String(), `"msg":"`+test.want+`"`) {
+				t.Fatalf("logs = %s", output.String())
 			}
 		})
 	}
 }
-
-func TestHandlerRemovesBlobWhenIndexingFails(t *testing.T) {
-	root := t.TempDir()
-	handler := NewCreatePageHandler(
-		localfs.New(root),
-		&rendererStub{},
-		idGeneratorStub{id: "page-id"},
-		clockStub{now: createdAt},
-		&indexWriterStub{err: errors.New("index unavailable")},
-	)
-
-	if _, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"}); err == nil {
-		t.Fatal("Handle() error = nil")
-	}
-	if _, err := os.Stat(filepath.Join(root, "page", "page.adoc")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("Stat(page/page.adoc) error = %v, want not exist", err)
-	}
-}
-
-func TestHandlerUsesDomainValidation(t *testing.T) {
-	handler := NewCreatePageHandler(localfs.New(t.TempDir()), &rendererStub{}, idGeneratorStub{id: "page-id"}, clockStub{now: createdAt}, &indexWriterStub{})
-
-	for name, command := range map[string]CreatePageCommand{
-		"missing title": {Area: "Knowledge"},
-		"invalid area":  {Title: "Page", Area: "///"},
-		"invalid tag":   {Title: "Page", Tags: []string{"---"}},
-		"duplicate tag": {Title: "Page", Tags: []string{"Go", "go"}},
-	} {
-		t.Run(name, func(t *testing.T) {
-			if _, err := handler.Handle(context.Background(), command); err == nil || !strings.Contains(err.Error(), "create page") {
-				t.Fatalf("Handle() error = %v", err)
-			}
-		})
-	}
-}
-
-func TestHandlerValidatesCommandBeforeGeneratingID(t *testing.T) {
-	ids := &countingIDGenerator{}
-	handler := NewCreatePageHandler(localfs.New(t.TempDir()), &rendererStub{}, ids, clockStub{now: createdAt}, &indexWriterStub{})
-
-	if _, err := handler.Handle(context.Background(), CreatePageCommand{}); err == nil {
-		t.Fatal("Handle() error = nil")
-	}
-	if ids.calls != 0 {
-		t.Fatalf("Generate() calls = %d, want 0", ids.calls)
-	}
-}
-
-type writerStub struct{}
-
-func (writerStub) Create(context.Context, ports.Blob) error { return nil }
-func (writerStub) Put(context.Context, ports.Blob) error    { return nil }
-func (writerStub) Delete(context.Context, string) error     { return nil }
-
-var _ ports.BlobWriter = writerStub{}
 
 func TestNewCreatePageHandlerRequiresDependencies(t *testing.T) {
-	validWriter := writerStub{}
+	validWriter := &blobWriterStub{}
 	validRenderer := &rendererStub{}
-	validIDs := idGeneratorStub{id: "page-id"}
-	validClock := clockStub{now: createdAt}
+	validIDs := &idGeneratorStub{id: "page-id"}
+	validClock := clockStub{now: testCreatedAt}
 	validIndex := &indexWriterStub{}
+	validLogger := testLogger()
 
 	for name, build := range map[string]func(){
-		"blob writer":    func() { NewCreatePageHandler(nil, validRenderer, validIDs, validClock, validIndex) },
-		"renderer":       func() { NewCreatePageHandler(validWriter, nil, validIDs, validClock, validIndex) },
-		"id generator":   func() { NewCreatePageHandler(validWriter, validRenderer, nil, validClock, validIndex) },
-		"clock":          func() { NewCreatePageHandler(validWriter, validRenderer, validIDs, nil, validIndex) },
-		"document index": func() { NewCreatePageHandler(validWriter, validRenderer, validIDs, validClock, nil) },
+		"blob writer":    func() { NewCreatePageHandler(nil, validRenderer, validIDs, validClock, validIndex, validLogger) },
+		"renderer":       func() { NewCreatePageHandler(validWriter, nil, validIDs, validClock, validIndex, validLogger) },
+		"id generator":   func() { NewCreatePageHandler(validWriter, validRenderer, nil, validClock, validIndex, validLogger) },
+		"clock":          func() { NewCreatePageHandler(validWriter, validRenderer, validIDs, nil, validIndex, validLogger) },
+		"document index": func() { NewCreatePageHandler(validWriter, validRenderer, validIDs, validClock, nil, validLogger) },
+		"logger":         func() { NewCreatePageHandler(validWriter, validRenderer, validIDs, validClock, validIndex, nil) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			defer func() {
@@ -205,4 +176,14 @@ func TestNewCreatePageHandlerRequiresDependencies(t *testing.T) {
 			build()
 		})
 	}
+}
+
+func newTestHandler(
+	blobs ports.BlobWriter,
+	renderer ports.Renderer,
+	ids ports.IDGenerator,
+	index ports.DocumentIndexWriter,
+	logger *slog.Logger,
+) *CreatePageHandler {
+	return NewCreatePageHandler(blobs, renderer, ids, clockStub{now: testCreatedAt}, index, logger)
 }

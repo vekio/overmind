@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	stdhttp "net/http"
 
 	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/app/createpage"
 	"git.casta.me/alberto/overmind/internal/domain"
 	httpresponse "git.casta.me/alberto/overmind/internal/http/response"
-	"git.casta.me/alberto/overmind/internal/ports"
 )
 
 const maxCreateRequestSize = 1 << 20
@@ -22,12 +22,22 @@ type createRequest struct {
 }
 
 type createResponse struct {
-	ID string `json:"id"`
+	ID   string `json:"id"`
+	Path string `json:"path"`
 }
 
-func handleCreate(handler app.CreatePageHandler) stdhttp.HandlerFunc {
+type createErrorResponse struct {
+	Error string `json:"error"`
+	Code  string `json:"code"`
+	Path  string `json:"path,omitempty"`
+}
+
+func handleCreate(handler app.CreatePageHandler, logger *slog.Logger) stdhttp.HandlerFunc {
 	if handler == nil {
 		panic("create page HTTP handler requires use case")
+	}
+	if logger == nil {
+		panic("create page HTTP handler requires logger")
 	}
 
 	return func(response stdhttp.ResponseWriter, request *stdhttp.Request) {
@@ -51,18 +61,53 @@ func handleCreate(handler app.CreatePageHandler) stdhttp.HandlerFunc {
 			Tags:  input.Tags,
 		})
 		if err != nil {
+			conflict, isConflict := errors.AsType[*createpage.PageAlreadyExistsError](err)
+			incomplete, isIncomplete := errors.AsType[*createpage.PageCreationIncompleteError](err)
 			switch {
-			case errors.Is(err, domain.ErrInvalidTitle), errors.Is(err, domain.ErrInvalidArea),
-				errors.Is(err, domain.ErrInvalidTag), errors.Is(err, domain.ErrDuplicateTag):
-				httpresponse.Error(response, stdhttp.StatusBadRequest, "invalid page")
-			case errors.Is(err, ports.ErrBlobAlreadyExists):
-				httpresponse.Error(response, stdhttp.StatusConflict, "page already exists")
+			case isConflict:
+				httpresponse.JSON(response, stdhttp.StatusConflict, createErrorResponse{
+					Error: "page already exists",
+					Code:  "page_already_exists",
+					Path:  conflict.Path,
+				})
+			case isIncomplete:
+				logger.ErrorContext(request.Context(), "page creation incomplete", "path", incomplete.Path, "error", err)
+				httpresponse.JSON(response, stdhttp.StatusInternalServerError, createErrorResponse{
+					Error: "page creation incomplete",
+					Code:  "page_creation_incomplete",
+					Path:  incomplete.Path,
+				})
+			case errors.Is(err, domain.ErrInvalidTitle):
+				httpresponse.JSON(response, stdhttp.StatusBadRequest, createErrorResponse{
+					Error: "invalid page title",
+					Code:  "invalid_page_title",
+				})
+			case errors.Is(err, domain.ErrInvalidArea):
+				httpresponse.JSON(response, stdhttp.StatusBadRequest, createErrorResponse{
+					Error: "invalid page area",
+					Code:  "invalid_page_area",
+				})
+			case errors.Is(err, domain.ErrInvalidTag):
+				httpresponse.JSON(response, stdhttp.StatusBadRequest, createErrorResponse{
+					Error: "invalid page tag",
+					Code:  "invalid_page_tag",
+				})
+			case errors.Is(err, domain.ErrDuplicateTag):
+				httpresponse.JSON(response, stdhttp.StatusBadRequest, createErrorResponse{
+					Error: "duplicate page tag",
+					Code:  "duplicate_page_tag",
+				})
 			default:
+				logger.ErrorContext(request.Context(), "create page failed", "error", err)
 				httpresponse.Error(response, stdhttp.StatusInternalServerError, "internal server error")
 			}
 			return
 		}
 
-		httpresponse.JSON(response, stdhttp.StatusCreated, createResponse{ID: result.ID.String()})
+		response.Header().Set("Location", "/documents/"+result.ID.String())
+		httpresponse.JSON(response, stdhttp.StatusCreated, createResponse{
+			ID:   result.ID.String(),
+			Path: result.Path,
+		})
 	}
 }

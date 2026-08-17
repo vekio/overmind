@@ -62,6 +62,9 @@ func prepareApplication(
 		if err != nil {
 			return ctx, err
 		}
+		if command.Bool("debug") {
+			cfg.Logging.Level = "debug"
+		}
 		runtime, err := build(cfg)
 		if err != nil {
 			return ctx, err

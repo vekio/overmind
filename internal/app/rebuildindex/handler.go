@@ -15,9 +15,10 @@ const (
 	headerPrefix    = "overmind-"
 	headerID        = headerPrefix + "id"
 	headerKind      = headerPrefix + "type"
-	headerTitle     = headerPrefix + "title"
 	headerTags      = headerPrefix + "tags"
 	headerCreatedAt = headerPrefix + "created-at"
+	// Kept only to ignore the redundant attribute written by older versions.
+	legacyTitle = headerPrefix + "title"
 )
 
 // RebuildIndexHandler reconstructs the read model from managed AsciiDoc blobs.
@@ -88,9 +89,13 @@ func indexedDocument(blob ports.Blob) (ports.IndexedDocument, bool, error) {
 	if err != nil {
 		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerKind, err)
 	}
-	title, err := domain.NewTitle(headers[headerTitle])
+	titleValue := ""
+	if processed.Analysis.Header.Title != nil {
+		titleValue = processed.Analysis.Header.Title.Text
+	}
+	title, err := domain.NewTitle(titleValue)
 	if err != nil {
-		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerTitle, err)
+		return ports.IndexedDocument{}, false, fmt.Errorf("invalid document title: %w", err)
 	}
 	tags, err := tagsFromHeader(headers[headerTags])
 	if err != nil {
@@ -104,7 +109,7 @@ func indexedDocument(blob ports.Blob) (ports.IndexedDocument, bool, error) {
 	attributes := make(map[string]string)
 	for name, value := range headers {
 		switch name {
-		case headerID, headerKind, headerTitle, headerTags, headerCreatedAt:
+		case headerID, headerKind, legacyTitle, headerTags, headerCreatedAt:
 			continue
 		default:
 			attributes[strings.TrimPrefix(name, headerPrefix)] = value

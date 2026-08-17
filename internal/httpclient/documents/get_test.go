@@ -47,8 +47,8 @@ func TestGetHandlerReturnsRemoteError(t *testing.T) {
 		t.Fatalf("httpclient.New() error = %v", err)
 	}
 	_, err = NewGetHandler(client).Handle(context.Background(), getdocument.GetDocumentQuery{ID: "missing"})
-	var responseError *httpclient.ResponseError
-	if !errors.As(err, &responseError) {
+	responseError, ok := errors.AsType[*httpclient.ResponseError](err)
+	if !ok {
 		t.Fatalf("Handle() error = %v, want ResponseError", err)
 	}
 	if responseError.StatusCode != stdhttp.StatusNotFound || responseError.Message != "document not found" {

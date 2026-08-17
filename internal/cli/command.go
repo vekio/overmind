@@ -17,7 +17,7 @@ func NewCommand(build func(config.Config) (Runtime, error)) *urfavecli.Command {
 		Name:                  "overmind",
 		Usage:                 "manage the overmind knowledge base",
 		EnableShellCompletion: true,
-		Flags:                 []urfavecli.Flag{configFlag()},
+		Flags:                 []urfavecli.Flag{configFlag(), debugFlag()},
 		Before:                prepareApplication(state, build),
 		After: func(_ context.Context, _ *urfavecli.Command) error {
 			return state.close()

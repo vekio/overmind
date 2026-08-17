@@ -13,15 +13,15 @@ import (
 func (handler *CreatePageHandler) newPageFromCommand(command CreatePageCommand) (domain.Page, error) {
 	title, err := domain.NewTitle(command.Title)
 	if err != nil {
-		return domain.Page{}, err
+		return domain.Page{}, fmt.Errorf("validate title: %w", err)
 	}
 	area, err := optionalArea(command.Area)
 	if err != nil {
-		return domain.Page{}, err
+		return domain.Page{}, fmt.Errorf("validate area: %w", err)
 	}
 	tags, err := tagsFromStrings(command.Tags)
 	if err != nil {
-		return domain.Page{}, err
+		return domain.Page{}, fmt.Errorf("validate tags: %w", err)
 	}
 
 	generatedID, err := handler.idGenerator.Generate()
@@ -41,7 +41,7 @@ func tagsFromStrings(values []string) (domain.Tags, error) {
 	for index, value := range values {
 		tag, err := domain.NewTag(value)
 		if err != nil {
-			return domain.Tags{}, err
+			return domain.Tags{}, fmt.Errorf("tag %d: %w", index+1, err)
 		}
 		tags[index] = tag
 	}

@@ -39,11 +39,14 @@ type createRequest struct {
 }
 
 type createResponse struct {
-	ID string `json:"id"`
+	ID   string `json:"id"`
+	Path string `json:"path"`
 }
 
 type errorResponse struct {
 	Error string `json:"error"`
+	Code  string `json:"code"`
+	Path  string `json:"path"`
 }
 
 // Handle sends the create-page command to the remote API.
@@ -69,7 +72,28 @@ func (handler *CreateHandler) Handle(ctx context.Context, command createpage.Cre
 	responseBody := io.LimitReader(response.Body, maxResponseSize)
 	if response.StatusCode != stdhttp.StatusCreated {
 		var remoteError errorResponse
-		if err := json.NewDecoder(responseBody).Decode(&remoteError); err != nil || remoteError.Error == "" {
+		decodeErr := json.NewDecoder(responseBody).Decode(&remoteError)
+		if decodeErr == nil && remoteError.Path != "" {
+			switch remoteError.Code {
+			case "page_already_exists":
+				return createpage.CreatePageResult{}, &createpage.PageAlreadyExistsError{Path: remoteError.Path}
+			case "page_creation_incomplete":
+				return createpage.CreatePageResult{}, createpage.NewPageCreationIncompleteError(remoteError.Path)
+			}
+		}
+		if decodeErr == nil {
+			switch remoteError.Code {
+			case "invalid_page_title":
+				return createpage.CreatePageResult{}, domain.ErrInvalidTitle
+			case "invalid_page_area":
+				return createpage.CreatePageResult{}, domain.ErrInvalidArea
+			case "invalid_page_tag":
+				return createpage.CreatePageResult{}, domain.ErrInvalidTag
+			case "duplicate_page_tag":
+				return createpage.CreatePageResult{}, domain.ErrDuplicateTag
+			}
+		}
+		if decodeErr != nil || remoteError.Error == "" {
 			remoteError.Error = stdhttp.StatusText(response.StatusCode)
 		}
 		return createpage.CreatePageResult{}, &httpclient.ResponseError{
@@ -87,5 +111,9 @@ func (handler *CreateHandler) Handle(ctx context.Context, command createpage.Cre
 		return createpage.CreatePageResult{}, fmt.Errorf("decode create page id: %w", err)
 	}
 
-	return createpage.CreatePageResult{ID: documentID}, nil
+	if output.Path == "" {
+		return createpage.CreatePageResult{}, fmt.Errorf("decode create page path: value is required")
+	}
+
+	return createpage.CreatePageResult{ID: documentID, Path: output.Path}, nil
 }
