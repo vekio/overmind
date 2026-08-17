@@ -9,11 +9,11 @@ import (
 	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/app/createpage"
 	"git.casta.me/alberto/overmind/internal/app/getdocument"
+	"git.casta.me/alberto/overmind/internal/app/listdocuments"
+	appmiddleware "git.casta.me/alberto/overmind/internal/app/middleware"
 	"git.casta.me/alberto/overmind/internal/app/rebuildindex"
+	"git.casta.me/alberto/overmind/internal/app/updatedocument"
 	"git.casta.me/alberto/overmind/internal/config"
-	"git.casta.me/alberto/overmind/internal/httpclient"
-	httpclientdocuments "git.casta.me/alberto/overmind/internal/httpclient/documents"
-	httpclientpages "git.casta.me/alberto/overmind/internal/httpclient/pages"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
 
@@ -85,11 +85,7 @@ func newConfiguredApplication(cfg config.Config, logger *slog.Logger) (*app.Appl
 		}
 		return newLocalApplication(deps, logger), deps.Closer, nil
 	case config.CLIModeRemote:
-		client, err := newOvermindClient(cfg.CLI)
-		if err != nil {
-			return nil, nil, err
-		}
-		return newRemoteApplication(client), nil, nil
+		return nil, nil, fmt.Errorf("remote CLI mode is not available")
 	default:
 		return nil, nil, fmt.Errorf("unsupported CLI mode %q", cfg.CLI.Mode)
 	}
@@ -121,31 +117,48 @@ func newLocalDeps(cfg config.Config) (localDeps, error) {
 }
 
 func newLocalApplication(deps localDeps, logger *slog.Logger) *app.Application {
-	return &app.Application{
-		Commands: app.Commands{
-			CreatePage: createpage.NewCreatePageHandler(
-				deps.Blobs,
-				deps.Renderer,
-				deps.IDs,
-				deps.Clock,
-				deps.Index,
-				logger.With("component", "createpage"),
-			),
-			RebuildIndex: rebuildindex.NewRebuildIndexHandler(deps.Blobs, deps.Index),
-		},
-		Queries: app.Queries{
-			GetDocument: getdocument.NewGetDocumentHandler(deps.Index, deps.Blobs),
-		},
-	}
-}
+	applicationLogger := logger.With("component", "application")
+	createPageHandler := createpage.NewCreatePageHandler(
+		deps.Blobs,
+		deps.Renderer,
+		deps.IDs,
+		deps.Clock,
+		deps.Index,
+	)
+	getDocumentHandler := getdocument.NewGetDocumentHandler(deps.Blobs)
+	updateDocumentHandler := updatedocument.NewUpdateDocumentHandler(deps.Blobs, deps.Blobs, deps.Clock, deps.Index)
+	listDocumentsHandler := listdocuments.NewListDocumentsHandler(deps.Index)
+	rebuildIndexHandler := rebuildindex.NewRebuildIndexHandler(deps.Blobs, deps.Index)
 
-func newRemoteApplication(client *httpclient.Client) *app.Application {
 	return &app.Application{
 		Commands: app.Commands{
-			CreatePage: httpclientpages.NewCreateHandler(client),
+			CreatePage: appmiddleware.Logging(
+				"create_page",
+				createPageHandler,
+				applicationLogger,
+			),
+			RebuildIndex: appmiddleware.Logging(
+				"rebuild_index",
+				rebuildIndexHandler,
+				applicationLogger,
+			),
+			UpdateDocument: appmiddleware.Logging(
+				"update_document",
+				updateDocumentHandler,
+				applicationLogger,
+			),
 		},
 		Queries: app.Queries{
-			GetDocument: httpclientdocuments.NewGetHandler(client),
+			GetDocument: appmiddleware.Logging(
+				"get_document",
+				getDocumentHandler,
+				applicationLogger,
+			),
+			ListDocuments: appmiddleware.Logging(
+				"list_documents",
+				listDocumentsHandler,
+				applicationLogger,
+			),
 		},
 	}
 }

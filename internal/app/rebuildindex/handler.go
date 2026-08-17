@@ -3,22 +3,10 @@ package rebuildindex
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
-	"git.casta.me/alberto/overmind/internal/domain"
+	"git.casta.me/alberto/overmind/internal/app/documentindex"
+	"git.casta.me/alberto/overmind/internal/app/documentparser"
 	"git.casta.me/alberto/overmind/internal/ports"
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-)
-
-const (
-	headerPrefix    = "overmind-"
-	headerID        = headerPrefix + "id"
-	headerKind      = headerPrefix + "type"
-	headerTags      = headerPrefix + "tags"
-	headerCreatedAt = headerPrefix + "created-at"
-	// Kept only to ignore the redundant attribute written by older versions.
-	legacyTitle = headerPrefix + "title"
 )
 
 // RebuildIndexHandler reconstructs the read model from managed AsciiDoc blobs.
@@ -51,12 +39,12 @@ func (handler *RebuildIndexHandler) Handle(ctx context.Context, _ RebuildIndexCo
 		if err != nil {
 			return RebuildIndexResult{}, fmt.Errorf("rebuild index: read %q: %w", path, err)
 		}
-		document, managed, err := indexedDocument(blob)
+		parsedDocument, managed, err := documentparser.Parse(blob.Content)
 		if err != nil {
 			return RebuildIndexResult{}, fmt.Errorf("rebuild index: parse %q: %w", path, err)
 		}
 		if managed {
-			documents = append(documents, document)
+			documents = append(documents, documentindex.FromParsed(blob.Path, parsedDocument))
 		}
 	}
 
@@ -64,81 +52,4 @@ func (handler *RebuildIndexHandler) Handle(ctx context.Context, _ RebuildIndexCo
 		return RebuildIndexResult{}, fmt.Errorf("rebuild index: %w", err)
 	}
 	return RebuildIndexResult{Documents: len(documents)}, nil
-}
-
-func indexedDocument(blob ports.Blob) (ports.IndexedDocument, bool, error) {
-	processed := asciidoc.Process(blob.Content)
-	headers := make(map[string]string)
-	for _, attribute := range processed.Analysis.Header.Attributes.All() {
-		if strings.HasPrefix(attribute.Name, headerPrefix) {
-			headers[attribute.Name] = attribute.Value
-		}
-	}
-	idValue, managed := headers[headerID]
-	if !managed {
-		return ports.IndexedDocument{}, false, nil
-	}
-	if processed.HasErrors() {
-		return ports.IndexedDocument{}, false, fmt.Errorf("invalid AsciiDoc: %s", processed.Diagnostics[0])
-	}
-	documentID, err := domain.NewDocumentID(idValue)
-	if err != nil {
-		return ports.IndexedDocument{}, false, err
-	}
-	kind, err := domain.NewDocumentKind(headers[headerKind])
-	if err != nil {
-		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerKind, err)
-	}
-	titleValue := ""
-	if processed.Analysis.Header.Title != nil {
-		titleValue = processed.Analysis.Header.Title.Text
-	}
-	title, err := domain.NewTitle(titleValue)
-	if err != nil {
-		return ports.IndexedDocument{}, false, fmt.Errorf("invalid document title: %w", err)
-	}
-	tags, err := tagsFromHeader(headers[headerTags])
-	if err != nil {
-		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerTags, err)
-	}
-	createdAt, err := time.Parse(time.RFC3339, headers[headerCreatedAt])
-	if err != nil {
-		return ports.IndexedDocument{}, false, fmt.Errorf("invalid %s: %w", headerCreatedAt, err)
-	}
-
-	attributes := make(map[string]string)
-	for name, value := range headers {
-		switch name {
-		case headerID, headerKind, legacyTitle, headerTags, headerCreatedAt:
-			continue
-		default:
-			attributes[strings.TrimPrefix(name, headerPrefix)] = value
-		}
-	}
-
-	return ports.IndexedDocument{
-		ID:         documentID,
-		Path:       blob.Path,
-		Kind:       kind,
-		Title:      title.String(),
-		Tags:       tags.Strings(),
-		CreatedAt:  createdAt,
-		Attributes: attributes,
-	}, true, nil
-}
-
-func tagsFromHeader(value string) (domain.Tags, error) {
-	if strings.TrimSpace(value) == "" {
-		return domain.Tags{}, nil
-	}
-	values := strings.Split(value, ",")
-	tags := make([]domain.Tag, len(values))
-	for index := range values {
-		tag, err := domain.NewTag(strings.TrimSpace(values[index]))
-		if err != nil {
-			return domain.Tags{}, err
-		}
-		tags[index] = tag
-	}
-	return domain.NewTags(tags...)
 }

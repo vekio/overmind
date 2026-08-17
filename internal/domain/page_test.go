@@ -35,6 +35,9 @@ func TestNewPageComposesValidatedValues(t *testing.T) {
 	if !page.CreatedAt().Equal(pageCreatedAt) {
 		t.Fatalf("Page.CreatedAt() = %v, want %v", page.CreatedAt(), pageCreatedAt)
 	}
+	if !page.UpdatedAt().Equal(pageCreatedAt) {
+		t.Fatalf("Page.UpdatedAt() = %v, want %v", page.UpdatedAt(), pageCreatedAt)
+	}
 }
 
 func TestNewPageAllowsRootArea(t *testing.T) {

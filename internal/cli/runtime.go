@@ -77,7 +77,7 @@ func prepareApplication(
 
 func requiresApplication(command *urfavecli.Command) bool {
 	switch command.Args().First() {
-	case "document", "index", "page", "serve":
+	case "edit", "index", "list", "ls", "page", "serve", "show":
 		return true
 	default:
 		return false

@@ -84,6 +84,58 @@ func TestStorePutReplacesExistingBlob(t *testing.T) {
 	}
 }
 
+func TestStoreUpdateReplacesBlobWithMatchingRevision(t *testing.T) {
+	ctx := context.Background()
+	store := New(t.TempDir())
+	if err := store.Create(ctx, ports.Blob{Path: "note.adoc", Content: []byte("old")}); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	current, err := store.Get(ctx, "note.adoc")
+	if err != nil {
+		t.Fatalf("Get() error = %v", err)
+	}
+	if current.Revision == "" {
+		t.Fatal("Get() returned an empty revision")
+	}
+
+	revision, err := store.Update(ctx, ports.Blob{Path: "note.adoc", Content: []byte("new")}, current.Revision)
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	updated, err := store.Get(ctx, "note.adoc")
+	if err != nil {
+		t.Fatalf("Get(updated) error = %v", err)
+	}
+	if string(updated.Content) != "new" || updated.Revision != revision || revision == current.Revision {
+		t.Fatalf("updated blob = %+v, returned revision = %q", updated, revision)
+	}
+}
+
+func TestStoreUpdateRejectsStaleRevision(t *testing.T) {
+	ctx := context.Background()
+	store := New(t.TempDir())
+	if err := store.Create(ctx, ports.Blob{Path: "note.adoc", Content: []byte("old")}); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	_, err := store.Update(ctx, ports.Blob{Path: "note.adoc", Content: []byte("new")}, "stale")
+	if !errors.Is(err, ports.ErrBlobChanged) {
+		t.Fatalf("Update() error = %v, want %v", err, ports.ErrBlobChanged)
+	}
+	current, getErr := store.Get(ctx, "note.adoc")
+	if getErr != nil || string(current.Content) != "old" {
+		t.Fatalf("Get() = (%+v, %v), want unchanged content", current, getErr)
+	}
+}
+
+func TestStoreUpdateRequiresExistingBlob(t *testing.T) {
+	store := New(t.TempDir())
+	_, err := store.Update(context.Background(), ports.Blob{Path: "missing.adoc"}, "revision")
+	if !errors.Is(err, ports.ErrBlobNotFound) {
+		t.Fatalf("Update() error = %v, want %v", err, ports.ErrBlobNotFound)
+	}
+}
+
 func TestStoreAllowsEmptyBlobContent(t *testing.T) {
 	ctx := context.Background()
 	store := New(t.TempDir())

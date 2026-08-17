@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand/v2"
 	"os"
 
 	"git.casta.me/alberto/overmind/pkg/asciidoc"
@@ -40,22 +39,20 @@ func inspect(path string) error {
 
 	printHeader(analysis)
 	printAnchorsAndReferences(analysis)
-	destination, err := summarySection(analysis)
-	if err != nil {
+	if _, err := summarySection(analysis); err != nil {
 		return err
 	}
-	videoURL, ok := analysis.Header.Attributes.Lookup("youtube-url")
-	if !ok {
+	if _, ok := analysis.Header.Attributes.Lookup("youtube-url"); !ok {
 		return fmt.Errorf("youtube note requires the youtube-url header attribute")
 	}
-	change, err := edit.ReplaceSectionContent(source, destination, randomVideoSummary(videoURL))
+	editor, err := edit.New(source)
 	if err != nil {
 		return err
 	}
-	updated, err := edit.Apply(source, []edit.TextEdit{change})
-	if err != nil {
+	if err := editor.SetHeaderAttribute("summary-status", "pending"); err != nil {
 		return err
 	}
+	updated := editor.Bytes()
 	if err := validateUpdatedSource(updated); err != nil {
 		return err
 	}
@@ -118,15 +115,6 @@ func summarySection(analysis asciidoc.Analysis) (*ast.Section, error) {
 	}
 	fmt.Printf("summary destination: %q at %s with %d block(s)\n", destination.Title, destination.Source, len(destination.Blocks))
 	return destination, nil
-}
-
-func randomVideoSummary(videoURL string) []byte {
-	summaries := []string{
-		"The video presents a practical introduction to designing a parser in Go, separating lexical recognition, syntax construction, and semantic analysis.",
-		"The main idea is to preserve exact source positions while progressively turning AsciiDoc input into an AST that client applications can inspect and edit safely.",
-		"The video explores an incremental parser architecture and shows why source-preserving edits are useful for automation built on top of AsciiDoc.",
-	}
-	return fmt.Appendf(nil, "Video:: %s\n\n%s", videoURL, summaries[rand.IntN(len(summaries))])
 }
 
 func validateUpdatedSource(source []byte) error {

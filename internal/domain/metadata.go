@@ -9,6 +9,7 @@ type Metadata struct {
 	title     Title
 	tags      Tags
 	createdAt time.Time
+	updatedAt time.Time
 }
 
 func newMetadata(id DocumentID, kind DocumentKind, title Title, tags Tags, createdAt time.Time) Metadata {
@@ -24,7 +25,10 @@ func newMetadata(id DocumentID, kind DocumentKind, title Title, tags Tags, creat
 	if createdAt.IsZero() {
 		panic("document metadata requires creation time")
 	}
-	return Metadata{id: id, kind: kind, title: title, tags: tags, createdAt: createdAt}
+	return Metadata{
+		id: id, kind: kind, title: title, tags: tags,
+		createdAt: createdAt, updatedAt: createdAt,
+	}
 }
 
 // ID returns the stable document identifier.
@@ -41,3 +45,7 @@ func (metadata Metadata) Tags() Tags { return metadata.tags }
 
 // CreatedAt returns when the document was created.
 func (metadata Metadata) CreatedAt() time.Time { return metadata.createdAt }
+
+// UpdatedAt returns when the document was last modified. A newly created
+// document has the same creation and update time.
+func (metadata Metadata) UpdatedAt() time.Time { return metadata.updatedAt }

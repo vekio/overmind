@@ -24,10 +24,12 @@ func NewCommand(build func(config.Config) (Runtime, error)) *urfavecli.Command {
 		},
 		Commands: []*urfavecli.Command{
 			asciidoccli.Command(),
-			newDocumentCommand(state),
+			newEditCommand(state),
 			newIndexCommand(state),
+			newListCommand(state),
 			newPageCommand(state),
 			newServeCommand(state),
+			newShowCommand(state),
 		},
 	}
 }

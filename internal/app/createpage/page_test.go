@@ -25,6 +25,9 @@ func TestNewPageFromCommandCreatesValidatedDomainPage(t *testing.T) {
 		!page.CreatedAt().Equal(testCreatedAt) {
 		t.Fatalf("page = %+v", page)
 	}
+	if !page.UpdatedAt().Equal(testCreatedAt) {
+		t.Fatalf("page updated at = %v, want %v", page.UpdatedAt(), testCreatedAt)
+	}
 	if got := page.Tags().Strings(); len(got) != 2 || got[0] != "go" || got[1] != "diseno-de-dominio" {
 		t.Fatalf("tags = %v", got)
 	}
@@ -127,7 +130,8 @@ func TestIndexEntryForPageSeparatesCommonAndSpecificMetadata(t *testing.T) {
 
 	entry := indexEntryForPage(page, "page/knowledge/my-page.adoc")
 	if entry.ID != id || entry.Path != "page/knowledge/my-page.adoc" || entry.Kind != domain.DocumentKindPage ||
-		entry.Title != "My Page" || !entry.CreatedAt.Equal(testCreatedAt) || len(entry.Tags) != 1 || entry.Tags[0] != "go" {
+		entry.Title != "My Page" || !entry.CreatedAt.Equal(testCreatedAt) || !entry.UpdatedAt.Equal(testCreatedAt) ||
+		len(entry.Tags) != 1 || entry.Tags[0] != "go" {
 		t.Fatalf("entry = %+v", entry)
 	}
 	if len(entry.Attributes) != 1 || entry.Attributes["area"] != "knowledge" {

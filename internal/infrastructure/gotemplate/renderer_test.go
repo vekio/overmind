@@ -44,7 +44,7 @@ func TestRendererRendersPageTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
-	if got, want := string(content), "= My page\n:overmind-id: page-id\n:overmind-type: page\n:overmind-area: knowledge\n:overmind-tags: go, diseno-de-dominio\n:overmind-created-at: 2026-08-14T08:30:00Z\n\n"; got != want {
+	if got, want := string(content), "= My page\n:overmind-id: page-id\n:overmind-type: page\n:overmind-area: knowledge\n:overmind-tags: go, diseno-de-dominio\n:overmind-created-at: 2026-08-14T08:30:00Z\n:overmind-updated-at: 2026-08-14T08:30:00Z\n\n"; got != want {
 		t.Fatalf("Render() = %q, want %q", got, want)
 	}
 }
@@ -69,7 +69,7 @@ func TestRendererRendersPageWithoutArea(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Render() error = %v", err)
 	}
-	if got, want := string(content), "= My page\n:overmind-id: page-id\n:overmind-type: page\n:overmind-area:\n:overmind-tags:\n:overmind-created-at: 2026-08-14T10:30:00Z\n\n"; got != want {
+	if got, want := string(content), "= My page\n:overmind-id: page-id\n:overmind-type: page\n:overmind-area:\n:overmind-tags:\n:overmind-created-at: 2026-08-14T10:30:00Z\n:overmind-updated-at: 2026-08-14T10:30:00Z\n\n"; got != want {
 		t.Fatalf("Render() = %q, want %q", got, want)
 	}
 }

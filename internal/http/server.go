@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/http/middleware"
 )
 
@@ -22,11 +21,8 @@ type Server struct {
 	server *stdhttp.Server
 }
 
-// NewServer creates an HTTP server exposing application use cases.
-func NewServer(address string, application *app.Application, logger *slog.Logger) (*Server, error) {
-	if application == nil {
-		panic("http server requires application")
-	}
+// NewServer creates Overmind's HTTP server.
+func NewServer(address string, logger *slog.Logger) (*Server, error) {
 	if logger == nil {
 		panic("http server requires logger")
 	}
@@ -38,7 +34,7 @@ func NewServer(address string, application *app.Application, logger *slog.Logger
 	return &Server{
 		server: &stdhttp.Server{
 			Addr:              address,
-			Handler:           middleware.Logger(httpLogger)(routes(application, httpLogger)),
+			Handler:           middleware.Logger(httpLogger)(routes()),
 			ReadHeaderTimeout: 5 * time.Second,
 			IdleTimeout:       60 * time.Second,
 		},

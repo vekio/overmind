@@ -4,7 +4,8 @@ CREATE TABLE documents (
     path TEXT NOT NULL UNIQUE,
     kind TEXT NOT NULL,
     title TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
 
 CREATE TABLE document_attributes (

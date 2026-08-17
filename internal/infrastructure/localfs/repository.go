@@ -2,6 +2,9 @@ package localfs
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"io"
 	"io/fs"
@@ -91,6 +94,66 @@ func (store *Store) Put(ctx context.Context, blob ports.Blob) error {
 	return root.WriteFile(localPath, blob.Content, 0o644)
 }
 
+// Update replaces an existing blob when its current revision matches the
+// expected revision. A same-directory rename keeps the visible replacement
+// atomic for readers.
+func (store *Store) Update(ctx context.Context, blob ports.Blob, expectedRevision string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
+	blobPath, err := normalizeBlobPath(blob.Path)
+	if err != nil {
+		return "", err
+	}
+	root, err := store.openRepositoryRoot(false)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ports.ErrBlobNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	defer root.Close()
+
+	localPath := filepath.FromSlash(blobPath)
+	currentContent, err := root.ReadFile(localPath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ports.ErrBlobNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	if blobRevision(currentContent) != expectedRevision {
+		return "", ports.ErrBlobChanged
+	}
+
+	temporaryPath, err := writeTemporaryBlob(root, localPath, blob.Content)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = root.Remove(temporaryPath) }()
+
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	// Recheck immediately before the rename so an edit made while the temporary
+	// file was being written is not knowingly overwritten.
+	currentContent, err = root.ReadFile(localPath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ports.ErrBlobNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	if blobRevision(currentContent) != expectedRevision {
+		return "", ports.ErrBlobChanged
+	}
+	if err := root.Rename(temporaryPath, localPath); err != nil {
+		return "", err
+	}
+	return blobRevision(blob.Content), nil
+}
+
 func (store *Store) Get(ctx context.Context, blobPath string) (ports.Blob, error) {
 	if err := ctx.Err(); err != nil {
 		return ports.Blob{}, err
@@ -118,7 +181,11 @@ func (store *Store) Get(ctx context.Context, blobPath string) (ports.Blob, error
 		return ports.Blob{}, err
 	}
 
-	return ports.Blob{Path: cleanPath, Content: contentBytes}, nil
+	return ports.Blob{
+		Path:     cleanPath,
+		Content:  contentBytes,
+		Revision: blobRevision(contentBytes),
+	}, nil
 }
 
 func (store *Store) Delete(ctx context.Context, blobPath string) error {
@@ -231,4 +298,37 @@ func normalizeBlobPath(blobPath string) (string, error) {
 		return "", ports.ErrInvalidBlobPath
 	}
 	return clean, nil
+}
+
+func blobRevision(content []byte) string {
+	digest := sha256.Sum256(content)
+	return hex.EncodeToString(digest[:])
+}
+
+func writeTemporaryBlob(root *os.Root, targetPath string, content []byte) (string, error) {
+	var randomBytes [8]byte
+	if _, err := rand.Read(randomBytes[:]); err != nil {
+		return "", err
+	}
+	temporaryPath := targetPath + ".overmind-" + hex.EncodeToString(randomBytes[:]) + ".tmp"
+	file, err := root.OpenFile(temporaryPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return "", err
+	}
+
+	written, writeErr := file.Write(content)
+	if writeErr == nil && written != len(content) {
+		writeErr = io.ErrShortWrite
+	}
+	if writeErr == nil {
+		writeErr = file.Sync()
+	}
+	if closeErr := file.Close(); writeErr == nil {
+		writeErr = closeErr
+	}
+	if writeErr != nil {
+		_ = root.Remove(temporaryPath)
+		return "", writeErr
+	}
+	return temporaryPath, nil
 }

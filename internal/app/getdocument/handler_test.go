@@ -2,71 +2,67 @@ package getdocument
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
-	"time"
 
-	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
 
-type indexReaderStub struct {
-	document ports.IndexedDocument
-	err      error
-}
-
 type blobReaderStub struct {
+	path string
 	blob ports.Blob
 	err  error
 }
 
-func (reader blobReaderStub) Get(context.Context, string) (ports.Blob, error) {
+func (reader *blobReaderStub) Get(_ context.Context, path string) (ports.Blob, error) {
+	reader.path = path
 	return reader.blob, reader.err
 }
 
-func (blobReaderStub) List(context.Context, ports.BlobFilter) ([]string, error) {
+func (*blobReaderStub) List(context.Context, ports.BlobFilter) ([]string, error) {
 	return nil, nil
 }
 
-func (index indexReaderStub) GetByID(context.Context, domain.DocumentID) (ports.IndexedDocument, error) {
-	return index.document, index.err
-}
+func TestHandlerGetsRawDocumentByPath(t *testing.T) {
+	blobs := &blobReaderStub{blob: ports.Blob{
+		Path:     "page/knowledge/page.adoc",
+		Content:  []byte("= Page\n"),
+		Revision: "revision-1",
+	}}
+	handler := NewGetDocumentHandler(blobs)
 
-func TestHandlerGetsDocumentByID(t *testing.T) {
-	id, _ := domain.NewDocumentID("page-id")
-	createdAt := time.Date(2026, time.August, 16, 10, 0, 0, 0, time.UTC)
-	handler := NewGetDocumentHandler(indexReaderStub{document: ports.IndexedDocument{
-		ID:         id,
-		Path:       "page/page.adoc",
-		Kind:       "page",
-		Title:      "Page",
-		Tags:       []string{"ddd", "go"},
-		CreatedAt:  createdAt,
-		Attributes: map[string]string{"area": "knowledge"},
-	}}, blobReaderStub{blob: ports.Blob{Path: "page/page.adoc", Content: []byte("= Page\n")}})
-
-	result, err := handler.Handle(context.Background(), GetDocumentQuery{ID: "page-id"})
+	result, err := handler.Handle(context.Background(), GetDocumentQuery{Path: "page/knowledge/page.adoc"})
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
-	if result.ID.String() != "page-id" || result.Path != "page/page.adoc" || result.Kind != "page" || result.Title != "Page" || len(result.Tags) != 2 || !result.CreatedAt.Equal(createdAt) || string(result.Content) != "= Page\n" || result.Attributes["area"] != "knowledge" {
-		t.Fatalf("Handle() = %+v", result)
+	if blobs.path != "page/knowledge/page.adoc" || result.Path != blobs.blob.Path ||
+		string(result.Content) != "= Page\n" || result.Revision != "revision-1" {
+		t.Fatalf("path = %q, result = %+v", blobs.path, result)
+	}
+
+	blobs.blob.Content[0] = '!'
+	if string(result.Content) != "= Page\n" {
+		t.Fatal("result content aliases blob content")
 	}
 }
 
-func TestNewHandlerRequiresDependencies(t *testing.T) {
-	validIndex := indexReaderStub{}
-	validBlobs := blobReaderStub{}
-	for name, build := range map[string]func(){
-		"index": func() { NewGetDocumentHandler(nil, validBlobs) },
-		"blobs": func() { NewGetDocumentHandler(validIndex, nil) },
-	} {
-		t.Run(name, func(t *testing.T) {
-			defer func() {
-				if recover() == nil {
-					t.Fatal("NewGetDocumentHandler() did not panic")
-				}
-			}()
-			build()
-		})
+func TestHandlerPreservesBlobFailure(t *testing.T) {
+	blobErr := errors.New("blob not found")
+	_, err := NewGetDocumentHandler(&blobReaderStub{err: blobErr}).Handle(
+		context.Background(),
+		GetDocumentQuery{Path: "page/missing.adoc"},
+	)
+	if !errors.Is(err, blobErr) || !strings.Contains(err.Error(), `get document "page/missing.adoc"`) {
+		t.Fatalf("Handle() error = %v", err)
 	}
+}
+
+func TestNewHandlerRequiresBlobReader(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("NewGetDocumentHandler() did not panic")
+		}
+	}()
+	NewGetDocumentHandler(nil)
 }

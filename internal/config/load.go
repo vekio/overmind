@@ -16,6 +16,14 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	cfg, err := LoadFrom(path)
+	if !errors.Is(err, os.ErrNotExist) {
+		return cfg, err
+	}
+
+	if err := WriteDefault(path, false); err != nil && !errors.Is(err, os.ErrExist) {
+		return Config{}, fmt.Errorf("create default config file %q: %w", path, err)
+	}
 	return LoadFrom(path)
 }
 
@@ -28,7 +36,10 @@ func LoadFrom(path string) (Config, error) {
 		return Config{}, fmt.Errorf("read config file %q: %w", path, err)
 	}
 
-	cfg := defaultConfig()
+	cfg, err := defaultConfig()
+	if err != nil {
+		return Config{}, err
+	}
 
 	loader, err := yaml.NewLoader(
 		bytes.NewReader(content),

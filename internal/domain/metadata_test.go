@@ -15,7 +15,8 @@ func TestMetadataExposesCommonDocumentValues(t *testing.T) {
 
 	metadata := newMetadata(id, DocumentKindPage, title, tags, createdAt)
 
-	if metadata.ID() != id || metadata.Kind() != DocumentKindPage || metadata.Title() != title || metadata.Tags().Len() != 2 || !metadata.CreatedAt().Equal(createdAt) {
+	if metadata.ID() != id || metadata.Kind() != DocumentKindPage || metadata.Title() != title || metadata.Tags().Len() != 2 ||
+		!metadata.CreatedAt().Equal(createdAt) || !metadata.UpdatedAt().Equal(createdAt) {
 		t.Fatalf("metadata = %#v", metadata)
 	}
 }

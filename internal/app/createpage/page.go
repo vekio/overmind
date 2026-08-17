@@ -71,6 +71,7 @@ func indexEntryForPage(page domain.Page, documentKey string) ports.IndexedDocume
 		Title:     page.Title().String(),
 		Tags:      page.Tags().Strings(),
 		CreatedAt: page.CreatedAt(),
+		UpdatedAt: page.UpdatedAt(),
 		Attributes: map[string]string{
 			"area": page.Area().String(),
 		},

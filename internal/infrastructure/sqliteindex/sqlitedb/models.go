@@ -10,6 +10,7 @@ type Document struct {
 	Kind      string `db:"kind"`
 	Title     string `db:"title"`
 	CreatedAt string `db:"created_at"`
+	UpdatedAt string `db:"updated_at"`
 }
 
 type DocumentAttribute struct {

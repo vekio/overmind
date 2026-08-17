@@ -31,3 +31,6 @@ func (page Page) Area() Area { return page.area }
 
 // CreatedAt returns when the page was created.
 func (page Page) CreatedAt() time.Time { return page.metadata.CreatedAt() }
+
+// UpdatedAt returns when the page was last modified.
+func (page Page) UpdatedAt() time.Time { return page.metadata.UpdatedAt() }

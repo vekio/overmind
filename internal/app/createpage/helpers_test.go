@@ -2,8 +2,6 @@ package createpage
 
 import (
 	"context"
-	"io"
-	"log/slog"
 	"time"
 
 	"git.casta.me/alberto/overmind/internal/ports"
@@ -80,8 +78,4 @@ func (index *indexWriterStub) Upsert(_ context.Context, document ports.IndexedDo
 
 func (index *indexWriterStub) ReplaceAll(context.Context, []ports.IndexedDocument) error {
 	return nil
-}
-
-func testLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }

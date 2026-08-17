@@ -19,6 +19,7 @@ type IndexedDocument struct {
 	Title      string
 	Tags       []string
 	CreatedAt  time.Time
+	UpdatedAt  time.Time
 	Attributes map[string]string
 }
 
@@ -33,9 +34,32 @@ type DocumentIndexReader interface {
 	GetByID(context.Context, domain.DocumentID) (IndexedDocument, error)
 }
 
+// ListIndexedDocumentsFilter restricts documents returned from the read
+// model. Every requested tag must be present.
+type ListIndexedDocumentsFilter struct {
+	Kind       domain.DocumentKind
+	Tags       domain.Tags
+	PathPrefix string
+}
+
+// IndexedDocumentSummary is the lightweight representation returned by
+// document listings.
+type IndexedDocumentSummary struct {
+	ID   domain.DocumentID
+	Path string
+	Kind domain.DocumentKind
+	Tags []string
+}
+
+// DocumentIndexLister lists documents from the read model.
+type DocumentIndexLister interface {
+	List(context.Context, ListIndexedDocumentsFilter) ([]IndexedDocumentSummary, error)
+}
+
 // DocumentIndex combines both sides for adapters implementing the complete
 // read model. Use cases should depend on the narrower interface.
 type DocumentIndex interface {
 	DocumentIndexWriter
 	DocumentIndexReader
+	DocumentIndexLister
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -110,6 +111,10 @@ func (store *Store) GetByID(ctx context.Context, id domain.DocumentID) (ports.In
 	if err != nil {
 		return ports.IndexedDocument{}, fmt.Errorf("decode indexed document creation time: %w", err)
 	}
+	updatedAt, err := time.Parse(time.RFC3339, document.UpdatedAt)
+	if err != nil {
+		return ports.IndexedDocument{}, fmt.Errorf("decode indexed document update time: %w", err)
+	}
 	attributes, err := store.queries.ListDocumentAttributes(ctx, id.String())
 	if err != nil {
 		return ports.IndexedDocument{}, fmt.Errorf("list indexed document attributes: %w", err)
@@ -126,12 +131,55 @@ func (store *Store) GetByID(ctx context.Context, id domain.DocumentID) (ports.In
 		Title:      document.Title,
 		Tags:       tags,
 		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 		Attributes: make(map[string]string, len(attributes)),
 	}
 	for _, attribute := range attributes {
 		result.Attributes[attribute.Name] = attribute.Value
 	}
 	return result, nil
+}
+
+// List returns lightweight document summaries matching every filter.
+func (store *Store) List(
+	ctx context.Context,
+	filter ports.ListIndexedDocumentsFilter,
+) ([]ports.IndexedDocumentSummary, error) {
+	tagsJSON, err := json.Marshal(filter.Tags.Strings())
+	if err != nil {
+		return nil, fmt.Errorf("encode indexed document tag filter: %w", err)
+	}
+	indexed, err := store.queries.ListDocuments(ctx, sqlitedb.ListDocumentsParams{
+		Kind:       filter.Kind.String(),
+		PathPrefix: filter.PathPrefix,
+		TagsJson:   string(tagsJSON),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list indexed documents: %w", err)
+	}
+
+	documents := make([]ports.IndexedDocumentSummary, len(indexed))
+	for index, document := range indexed {
+		id, err := domain.NewDocumentID(document.ID)
+		if err != nil {
+			return nil, fmt.Errorf("decode indexed document id: %w", err)
+		}
+		kind, err := domain.NewDocumentKind(document.Kind)
+		if err != nil {
+			return nil, fmt.Errorf("decode indexed document kind: %w", err)
+		}
+		tags, err := store.queries.ListDocumentTags(ctx, document.ID)
+		if err != nil {
+			return nil, fmt.Errorf("list indexed document tags: %w", err)
+		}
+		documents[index] = ports.IndexedDocumentSummary{
+			ID:   id,
+			Path: document.Path,
+			Kind: kind,
+			Tags: tags,
+		}
+	}
+	return documents, nil
 }
 
 // Upsert replaces one indexed document and its attributes atomically.
@@ -181,6 +229,7 @@ func upsert(ctx context.Context, queries *sqlitedb.Queries, document ports.Index
 		Kind:      document.Kind.String(),
 		Title:     document.Title,
 		CreatedAt: document.CreatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt: document.UpdatedAt.UTC().Format(time.RFC3339),
 	}); err != nil {
 		return fmt.Errorf("upsert indexed document: %w", err)
 	}

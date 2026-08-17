@@ -20,18 +20,46 @@ func TestLoadFromReturnsNotExistError(t *testing.T) {
 }
 
 func TestDefaultPathUsesOvermindConfigDirectory(t *testing.T) {
+	configHome := filepath.Join(t.TempDir(), "config")
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+
 	path, err := defaultPath()
 	if err != nil {
 		t.Fatalf("defaultPath() error = %v", err)
 	}
 
-	wantSuffix := filepath.Join("overmind", "config.yml")
-	if got := path; !strings.HasSuffix(got, wantSuffix) {
-		t.Fatalf("defaultPath() = %q, want suffix %q", got, wantSuffix)
+	want := filepath.Join(configHome, "overmind", "config.yml")
+	if path != want {
+		t.Fatalf("defaultPath() = %q, want %q", path, want)
+	}
+}
+
+func TestLoadCreatesDefaultUserConfig(t *testing.T) {
+	configHome := filepath.Join(t.TempDir(), "config")
+	dataHome := filepath.Join(t.TempDir(), "data")
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("XDG_DATA_HOME", dataHome)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	configPath := filepath.Join(configHome, "overmind", "config.yml")
+	if _, err := os.Stat(configPath); err != nil {
+		t.Fatalf("os.Stat(%q) error = %v", configPath, err)
+	}
+	if want := filepath.Join(dataHome, "overmind", "vault"); cfg.Vault.RootPath != want {
+		t.Fatalf("Vault.RootPath = %q, want %q", cfg.Vault.RootPath, want)
+	}
+	if want := filepath.Join(dataHome, "overmind", "index.db"); cfg.Index.Path != want {
+		t.Fatalf("Index.Path = %q, want %q", cfg.Index.Path, want)
 	}
 }
 
 func TestLoadFromMergesFileWithDefaults(t *testing.T) {
+	dataHome := filepath.Join(t.TempDir(), "data")
+	t.Setenv("XDG_DATA_HOME", dataHome)
 	path := filepath.Join(t.TempDir(), "config.yml")
 	err := os.WriteFile(path, []byte(`vault:
   localRoot: ./notes
@@ -64,12 +92,14 @@ http:
 	if cfg.CLI.Mode != CLIModeLocal || cfg.CLI.Endpoint != "" {
 		t.Fatalf("CLI = %+v, want local mode without endpoint", cfg.CLI)
 	}
-	if cfg.Index.Driver != "sqlite" || cfg.Index.Path != "./.overmind/index.db" {
+	if cfg.Index.Driver != "sqlite" || cfg.Index.Path != filepath.Join(dataHome, "overmind", "index.db") {
 		t.Fatalf("Index = %+v, want default SQLite index", cfg.Index)
 	}
 }
 
-func TestLoadFromRequiresRootPathForLocalDriver(t *testing.T) {
+func TestLoadFromUsesDefaultRootPathForLocalDriver(t *testing.T) {
+	dataHome := filepath.Join(t.TempDir(), "data")
+	t.Setenv("XDG_DATA_HOME", dataHome)
 	path := filepath.Join(t.TempDir(), "config.yml")
 	err := os.WriteFile(path, []byte(`vault:
   driver: local
@@ -80,9 +110,12 @@ logging:
 		t.Fatalf("os.WriteFile() error = %v", err)
 	}
 
-	_, err = LoadFrom(path)
-	if err == nil || !strings.Contains(err.Error(), "vault.localRoot is required") {
-		t.Fatalf("LoadFrom() error = %v, want missing vault.localRoot error", err)
+	cfg, err := LoadFrom(path)
+	if err != nil {
+		t.Fatalf("LoadFrom() error = %v", err)
+	}
+	if want := filepath.Join(dataHome, "overmind", "vault"); cfg.Vault.RootPath != want {
+		t.Fatalf("Vault.RootPath = %q, want %q", cfg.Vault.RootPath, want)
 	}
 }
 
@@ -139,6 +172,8 @@ logging:
 
 func TestWriteDefaultCreatesConfigFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "overmind", "config.yml")
+	dataHome := filepath.Join(t.TempDir(), "data")
+	t.Setenv("XDG_DATA_HOME", dataHome)
 
 	if err := WriteDefault(path, false); err != nil {
 		t.Fatalf("WriteDefault() error = %v", err)
@@ -153,7 +188,9 @@ func TestWriteDefaultCreatesConfigFile(t *testing.T) {
 	if err := yaml.Load(content, &cfg); err != nil {
 		t.Fatalf("yaml.Load() error = %v", err)
 	}
-	if cfg.Vault.Driver != "local" || cfg.Vault.RootPath != "" || cfg.Logging.Level != "info" || cfg.HTTP.Address != "127.0.0.1:8080" || cfg.CLI.Mode != CLIModeLocal || cfg.CLI.Endpoint != "" || cfg.Index.Driver != "sqlite" || cfg.Index.Path != "./.overmind/index.db" {
+	wantVaultPath := filepath.Join(dataHome, "overmind", "vault")
+	wantIndexPath := filepath.Join(dataHome, "overmind", "index.db")
+	if cfg.Vault.Driver != "local" || cfg.Vault.RootPath != wantVaultPath || cfg.Logging.Level != "info" || cfg.HTTP.Address != "127.0.0.1:8080" || cfg.CLI.Mode != CLIModeLocal || cfg.CLI.Endpoint != "" || cfg.Index.Driver != "sqlite" || cfg.Index.Path != wantIndexPath {
 		t.Fatalf("written config = %+v, want default configuration", cfg)
 	}
 	if strings.Contains(string(content), "endpoint:") {

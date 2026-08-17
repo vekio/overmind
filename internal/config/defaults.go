@@ -21,10 +21,17 @@ func defaultPath() (string, error) {
 	return filepath.Join(configDir, defaultDirectoryName, "config.yml"), nil
 }
 
-func defaultConfig() Config {
+func defaultConfig() (Config, error) {
+	dataDir, err := defaultDataDir()
+	if err != nil {
+		return Config{}, fmt.Errorf("resolve user data directory: %w", err)
+	}
+	dataPath := filepath.Join(dataDir, defaultDirectoryName)
+
 	return Config{
 		Vault: Vault{
-			Driver: "local",
+			Driver:   "local",
+			RootPath: filepath.Join(dataPath, "vault"),
 		},
 		Logging: Logging{
 			Level: "info",
@@ -37,13 +44,34 @@ func defaultConfig() Config {
 		},
 		Index: Index{
 			Driver: "sqlite",
-			Path:   "./.overmind/index.db",
+			Path:   filepath.Join(dataPath, "index.db"),
 		},
-	}
+	}, nil
 }
 
+func defaultDataDir() (string, error) {
+	if dataDir := os.Getenv("XDG_DATA_HOME"); dataDir != "" {
+		if !filepath.IsAbs(dataDir) {
+			return "", fmt.Errorf("XDG_DATA_HOME must be an absolute path")
+		}
+		return dataDir, nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(homeDir, ".local", "share"), nil
+}
+
+// WriteDefault writes a usable local configuration without replacing an
+// existing file unless force is true.
 func WriteDefault(path string, force bool) error {
-	content, err := yaml.Dump(defaultConfig(), yaml.WithIndent(2))
+	cfg, err := defaultConfig()
+	if err != nil {
+		return err
+	}
+	content, err := yaml.Dump(cfg, yaml.WithIndent(2))
 	if err != nil {
 		return fmt.Errorf("encode default config: %w", err)
 	}

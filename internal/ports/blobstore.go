@@ -8,6 +8,7 @@ import (
 var (
 	ErrBlobAlreadyExists = errors.New("blob already exists")
 	ErrBlobNotFound      = errors.New("blob not found")
+	ErrBlobChanged       = errors.New("blob changed since it was read")
 	ErrInvalidBlobPath   = errors.New("invalid blob path")
 )
 
@@ -15,6 +16,8 @@ var (
 type Blob struct {
 	Path    string
 	Content []byte
+	// Revision is an opaque value that changes with the blob content.
+	Revision string
 }
 
 // BlobFilter restricts blobs returned by BlobReader.List.
@@ -30,6 +33,12 @@ type BlobWriter interface {
 	Delete(ctx context.Context, blobPath string) error
 }
 
+// BlobUpdater conditionally replaces an existing blob. The returned revision
+// identifies the newly stored content.
+type BlobUpdater interface {
+	Update(ctx context.Context, blob Blob, expectedRevision string) (string, error)
+}
+
 // BlobReader is the persistence port used by queries.
 type BlobReader interface {
 	Get(ctx context.Context, blobPath string) (Blob, error)
@@ -41,4 +50,5 @@ type BlobReader interface {
 type BlobStore interface {
 	BlobReader
 	BlobWriter
+	BlobUpdater
 }

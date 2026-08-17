@@ -20,17 +20,12 @@ func newServeCommand(state *applicationState) *urfavecli.Command {
 			if state.config.CLI.Mode != config.CLIModeLocal {
 				return fmt.Errorf("serve requires cli.mode %q", config.CLIModeLocal)
 			}
-			application, err := state.get()
-			if err != nil {
-				return err
-			}
-
 			address := command.String("address")
 			if address == "" {
 				address = state.config.HTTP.Address
 			}
 
-			server, err := overmindhttp.NewServer(address, application, state.runtime.Logger())
+			server, err := overmindhttp.NewServer(address, state.runtime.Logger())
 			if err != nil {
 				return err
 			}

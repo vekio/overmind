@@ -4,12 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	stdhttp "net/http"
 	"os"
-	"time"
 
 	"git.casta.me/alberto/overmind/internal/config"
-	"git.casta.me/alberto/overmind/internal/httpclient"
 	"git.casta.me/alberto/overmind/internal/infrastructure/gotemplate"
 	"git.casta.me/alberto/overmind/internal/infrastructure/localfs"
 	"git.casta.me/alberto/overmind/internal/infrastructure/sqliteindex"
@@ -17,12 +14,6 @@ import (
 	"git.casta.me/alberto/overmind/internal/infrastructure/uuidgenerator"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
-
-const remoteHTTPTimeout = 30 * time.Second
-
-func newOvermindClient(cfg config.CLI) (*httpclient.Client, error) {
-	return httpclient.New(cfg.Endpoint, &stdhttp.Client{Timeout: remoteHTTPTimeout})
-}
 
 func newClock() ports.Clock {
 	return systemclock.New()

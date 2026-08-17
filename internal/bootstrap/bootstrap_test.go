@@ -9,6 +9,8 @@ import (
 
 	"git.casta.me/alberto/overmind/internal/app/createpage"
 	"git.casta.me/alberto/overmind/internal/app/getdocument"
+	"git.casta.me/alberto/overmind/internal/app/listdocuments"
+	"git.casta.me/alberto/overmind/internal/app/updatedocument"
 	"git.casta.me/alberto/overmind/internal/config"
 )
 
@@ -54,16 +56,43 @@ func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 	if got := string(content); !strings.HasPrefix(got, "= First page\n:overmind-id: ") {
 		t.Fatalf("page content = %q", got)
 	}
-	indexed, err := container.app.Queries.GetDocument.Handle(context.Background(), getdocument.GetDocumentQuery{ID: result.ID.String()})
+	retrieved, err := container.app.Queries.GetDocument.Handle(context.Background(), getdocument.GetDocumentQuery{
+		Path: "page/knowledge/first-page.adoc",
+	})
 	if err != nil {
 		t.Fatalf("GetDocument.Handle() error = %v", err)
 	}
-	if indexed.Path != "page/knowledge/first-page.adoc" || indexed.Kind != "page" || indexed.Title != "First page" || indexed.Attributes["area"] != "knowledge" || string(indexed.Content) != string(content) {
-		t.Fatalf("indexed document = %+v", indexed)
+	if retrieved.Path != "page/knowledge/first-page.adoc" || string(retrieved.Content) != string(content) || retrieved.Revision == "" {
+		t.Fatalf("retrieved document = %+v", retrieved)
+	}
+	editedContent := []byte(strings.Replace(string(retrieved.Content), "= First page", "= Updated page", 1))
+	updated, err := container.app.Commands.UpdateDocument.Handle(context.Background(), updatedocument.UpdateDocumentCommand{
+		Path:             retrieved.Path,
+		Content:          editedContent,
+		ExpectedRevision: retrieved.Revision,
+	})
+	if err != nil {
+		t.Fatalf("UpdateDocument.Handle() error = %v", err)
+	}
+	if updated.Path != retrieved.Path || updated.Revision == "" || updated.Revision == retrieved.Revision {
+		t.Fatalf("updated document = %+v", updated)
+	}
+	storedContent, err := os.ReadFile(filepath.Join(root, "page", "knowledge", "first-page.adoc"))
+	if err != nil || string(storedContent) != string(editedContent) {
+		t.Fatalf("stored edited content = %q, error = %v", storedContent, err)
+	}
+	listed, err := container.app.Queries.ListDocuments.Handle(context.Background(), listdocuments.ListDocumentsQuery{
+		Type: "page",
+	})
+	if err != nil {
+		t.Fatalf("ListDocuments.Handle() error = %v", err)
+	}
+	if len(listed.Documents) != 1 || listed.Documents[0].Path != "page/knowledge/first-page.adoc" {
+		t.Fatalf("listed documents = %+v", listed.Documents)
 	}
 }
 
-func TestContainerBuildsRemoteApplicationWithoutLocalVault(t *testing.T) {
+func TestContainerReportsUnavailableRemoteMode(t *testing.T) {
 	container, err := NewContainer(config.Config{
 		Logging: config.Logging{Level: "info"},
 		HTTP:    config.HTTP{Address: "127.0.0.1:8080"},
@@ -72,10 +101,10 @@ func TestContainerBuildsRemoteApplicationWithoutLocalVault(t *testing.T) {
 			Endpoint: "https://overmind.example",
 		},
 	})
-	if err != nil {
-		t.Fatalf("NewContainer() error = %v", err)
+	if container != nil {
+		t.Fatalf("NewContainer() container = %#v, want nil", container)
 	}
-	if container.app == nil || container.app.Commands.CreatePage == nil || container.app.Queries.GetDocument == nil {
-		t.Fatal("remote application is incomplete")
+	if err == nil || !strings.Contains(err.Error(), "remote CLI mode is not available") {
+		t.Fatalf("NewContainer() error = %v", err)
 	}
 }
