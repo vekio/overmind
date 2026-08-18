@@ -1,4 +1,4 @@
-package cli
+package local
 
 import (
 	"bytes"
@@ -38,7 +38,7 @@ func TestShowWritesRawDocumentByPath(t *testing.T) {
 	handler := &getDocumentHandlerStub{result: getdocument.GetDocumentResult{
 		Path: "page/knowledge/page.adoc", Content: []byte("= Page\n"),
 	}}
-	command := NewCommand(func(config.Config) (Runtime, error) {
+	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
 		return runtimeStub{application: &app.Application{
 			Queries: app.Queries{GetDocument: handler},
 		}}, nil
@@ -58,9 +58,9 @@ func TestShowReadsPathFromPipeline(t *testing.T) {
 	handler := &getDocumentHandlerStub{result: getdocument.GetDocumentResult{
 		Path: "page/knowledge/page.adoc", Content: []byte("= Page\n"),
 	}}
-	state := &applicationState{runtime: runtimeStub{application: &app.Application{
+	state := newTestApplicationState(runtimeStub{application: &app.Application{
 		Queries: app.Queries{GetDocument: handler},
-	}}}
+	}})
 	command := newShowCommand(state)
 	command.Reader = strings.NewReader("page/knowledge/page.adoc\tpage\tgo,ddd\n")
 	var output bytes.Buffer
@@ -89,7 +89,7 @@ func TestShowCompletesIndexedPathPrefix(t *testing.T) {
 	handler := &showListDocumentsHandlerStub{result: listdocuments.ListDocumentsResult{Documents: []listdocuments.DocumentSummary{{
 		ID: id, Path: "page/development/go.adoc", Type: domain.DocumentKindPage,
 	}}}}
-	command := NewCommand(func(config.Config) (Runtime, error) {
+	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
 		return runtimeStub{application: &app.Application{
 			Queries: app.Queries{ListDocuments: handler},
 		}}, nil

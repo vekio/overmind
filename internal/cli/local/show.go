@@ -1,4 +1,4 @@
-package cli
+package local
 
 import (
 	"context"
@@ -27,7 +27,7 @@ func newShowCommand(state *applicationState) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			application, err := state.get()
+			application, err := state.Application()
 			if err != nil {
 				return err
 			}

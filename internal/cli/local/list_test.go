@@ -1,4 +1,4 @@
-package cli
+package local
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ func TestListDocumentsWritesPipelineFriendlyTSV(t *testing.T) {
 		{ID: firstID, Path: "page/first.adoc", Type: domain.DocumentKindPage, Tags: []string{"go", "ddd"}},
 		{ID: secondID, Path: "page/second.adoc", Type: domain.DocumentKindPage},
 	}}}
-	command := NewCommand(func(config.Config) (Runtime, error) {
+	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
 		return runtimeStub{application: &app.Application{
 			Queries: app.Queries{ListDocuments: handler},
 		}}, nil
@@ -59,9 +59,9 @@ func TestListDocumentsWritesPipelineFriendlyTSV(t *testing.T) {
 func TestListDocumentsPreservesUseCaseError(t *testing.T) {
 	useCaseErr := errors.New("list indexed documents: database unavailable")
 	handler := &listDocumentsHandlerStub{err: useCaseErr}
-	state := &applicationState{runtime: runtimeStub{application: &app.Application{
+	state := newTestApplicationState(runtimeStub{application: &app.Application{
 		Queries: app.Queries{ListDocuments: handler},
-	}}}
+	}})
 
 	err := newListCommand(state).Run(context.Background(), []string{"ls"})
 	if !errors.Is(err, useCaseErr) || !strings.Contains(err.Error(), "database unavailable") {

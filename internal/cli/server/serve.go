@@ -1,4 +1,4 @@
-package cli
+package server
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/url"
 
-	"git.casta.me/alberto/overmind/internal/config"
 	overmindhttp "git.casta.me/alberto/overmind/internal/http"
 	urfavecli "github.com/urfave/cli/v3"
 )
@@ -17,15 +16,16 @@ func newServeCommand(state *applicationState) *urfavecli.Command {
 		Usage: "serve the Overmind HTTP API",
 		Flags: []urfavecli.Flag{addressFlag()},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
-			if state.config.CLI.Mode != config.CLIModeLocal {
-				return fmt.Errorf("serve requires cli.mode %q", config.CLIModeLocal)
-			}
 			address := command.String("address")
 			if address == "" {
-				address = state.config.HTTP.Address
+				address = state.Config().HTTP.Address
 			}
 
-			server, err := overmindhttp.NewServer(address, state.runtime.Logger())
+			logger, err := state.Logger()
+			if err != nil {
+				return err
+			}
+			server, err := overmindhttp.NewServer(address, logger)
 			if err != nil {
 				return err
 			}
@@ -51,14 +51,4 @@ func localHTTPURL(address string) string {
 		host = "localhost"
 	}
 	return (&url.URL{Scheme: "http", Host: net.JoinHostPort(host, port), Path: "/"}).String()
-}
-
-func addressFlag() urfavecli.Flag {
-	return &urfavecli.StringFlag{
-		Name:    "address",
-		Aliases: []string{"a"},
-		Usage:   "HTTP listen address",
-		Config:  urfavecli.StringConfig{TrimSpace: true},
-		Sources: urfavecli.EnvVars("OVERMIND_HTTP_ADDRESS"),
-	}
 }

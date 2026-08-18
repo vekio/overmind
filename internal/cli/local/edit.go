@@ -1,4 +1,4 @@
-package cli
+package local
 
 import (
 	"bytes"
@@ -33,7 +33,7 @@ func newEditCommand(state *applicationState) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			application, err := state.get()
+			application, err := state.Application()
 			if err != nil {
 				return err
 			}

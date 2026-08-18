@@ -1,10 +1,13 @@
 set unstable
 set lists
 
-binary_name := "overmind"
+cli_binary_name := "overmind"
+server_binary_name := "overmind-server"
 build_dir := "bin"
-main_package := "./cmd/overmind"
-development_config := "./config.yml"
+cli_main_package := "./cmd/overmind"
+server_main_package := "./cmd/overmind-server"
+development_cli_config := "./config.yml"
+development_server_config := "./server.config.yml"
 
 # List available recipes
 [group('help')]
@@ -72,21 +75,27 @@ generate:
 migration name:
     go tool goose -dir internal/infrastructure/sqliteindex/migrations -s create {{ name }} sql
 
-# Build the CLI binary into ./bin
+# Build the CLI and server binaries into ./bin
 [group('artifacts')]
 build: check
     mkdir -p {{ build_dir }}
-    go build -o {{ build_dir }}/{{ binary_name }} {{ main_package }}
+    go build -o {{ build_dir }}/{{ cli_binary_name }} {{ cli_main_package }}
+    go build -o {{ build_dir }}/{{ server_binary_name }} {{ server_main_package }}
 
-# Install the CLI binary into GOPATH/bin or GOBIN
+# Install the CLI and server binaries into GOPATH/bin or GOBIN
 [group('artifacts')]
 install: check
-    go install {{ main_package }}
+    go install {{ cli_main_package }} {{ server_main_package }}
 
 # Run the CLI; pass arguments directly after `run`
 [group('development')]
 run *args:
-    go run {{ main_package }} --config {{ development_config }} {{ quote(args) }}
+    go run {{ cli_main_package }} --config {{ development_cli_config }} {{ quote(args) }}
+
+# Run an overmind-server subcommand; defaults to `serve`
+[group('development')]
+server *args="serve":
+    go run {{ server_main_package }} --config {{ development_server_config }} {{ quote(args) }}
 
 # Remove build artifacts
 [group('artifacts')]

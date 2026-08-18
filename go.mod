@@ -1,15 +1,16 @@
 module git.casta.me/alberto/overmind
 
-go 1.26.0
+go 1.26.6
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/urfave/cli/v3 v3.10.1
-	go.yaml.in/yaml/v4 v4.0.0-rc.6
+	github.com/urfave/cli/v3 v3.11.0
+	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 )
 
 require (
 	github.com/pressly/goose/v3 v3.27.2
+	github.com/vekio/config v0.2.0
 	golang.org/x/text v0.41.0
 	modernc.org/sqlite v1.53.0
 )
@@ -72,6 +73,7 @@ require (
 	github.com/sqlc-dev/sqlc v1.31.1 // indirect
 	github.com/tetratelabs/wazero v1.11.0 // indirect
 	github.com/tursodatabase/libsql-client-go v0.0.0-20251219100830-236aa1ff8acc // indirect
+	github.com/vekio/x v0.0.1 // indirect
 	github.com/vertica/vertica-sql-go v1.3.6 // indirect
 	github.com/wasilibs/go-pgquery v0.0.0-20250409022910-10ac41983c07 // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20240620070341-3dff1577cd52 // indirect

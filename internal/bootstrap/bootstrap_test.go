@@ -16,15 +16,13 @@ import (
 
 func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 	root := t.TempDir()
-	container, err := NewContainer(config.Config{
+	container, err := NewCLIContainer(config.CLIConfig{
 		Vault:   config.Vault{Driver: "local", RootPath: root},
 		Logging: config.Logging{Level: "info"},
-		HTTP:    config.HTTP{Address: "127.0.0.1:8080"},
-		CLI:     config.CLI{Mode: config.CLIModeLocal},
 		Index:   config.Index{Driver: "sqlite", Path: filepath.Join(root, "index.db")},
 	})
 	if err != nil {
-		t.Fatalf("NewContainer() error = %v", err)
+		t.Fatalf("NewCLIContainer() error = %v", err)
 	}
 	t.Cleanup(func() {
 		if err := container.Close(); err != nil {
@@ -92,19 +90,19 @@ func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 	}
 }
 
-func TestContainerReportsUnavailableRemoteMode(t *testing.T) {
-	container, err := NewContainer(config.Config{
+func TestServerContainerBuildsApplication(t *testing.T) {
+	root := t.TempDir()
+	container, err := NewServerContainer(config.ServerConfig{
+		Vault:   config.Vault{Driver: "local", RootPath: root},
 		Logging: config.Logging{Level: "info"},
 		HTTP:    config.HTTP{Address: "127.0.0.1:8080"},
-		CLI: config.CLI{
-			Mode:     config.CLIModeRemote,
-			Endpoint: "https://overmind.example",
-		},
+		Index:   config.Index{Driver: "sqlite", Path: filepath.Join(root, "index.db")},
 	})
-	if container != nil {
-		t.Fatalf("NewContainer() container = %#v, want nil", container)
+	if err != nil {
+		t.Fatalf("NewServerContainer() error = %v", err)
 	}
-	if err == nil || !strings.Contains(err.Error(), "remote CLI mode is not available") {
-		t.Fatalf("NewContainer() error = %v", err)
+	t.Cleanup(func() { _ = container.Close() })
+	if container.Application() == nil || container.Logger() == nil {
+		t.Fatalf("container = %#v", container)
 	}
 }

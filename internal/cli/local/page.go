@@ -1,4 +1,4 @@
-package cli
+package local
 
 import (
 	"context"
@@ -27,7 +27,7 @@ func newPageCommand(state *applicationState) *urfavecli.Command {
 			if command.NArg() != 0 {
 				return fmt.Errorf("unexpected arguments after title: %q", command.Args().Slice())
 			}
-			application, err := state.get()
+			application, err := state.Application()
 			if err != nil {
 				return err
 			}

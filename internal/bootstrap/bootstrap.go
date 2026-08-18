@@ -2,7 +2,6 @@
 package bootstrap
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 
@@ -19,10 +18,15 @@ import (
 
 // Container is the configured application runtime.
 type Container struct {
-	config config.Config
 	log    *slog.Logger
 	app    *app.Application
 	closer io.Closer
+}
+
+type runtimeConfig struct {
+	Vault   config.Vault
+	Logging config.Logging
+	Index   config.Index
 }
 
 // Application returns the use cases exposed by the configured runtime.
@@ -52,46 +56,41 @@ type localDeps struct {
 	Closer   io.Closer
 }
 
-// NewContainer builds the dependency graph for a configuration.
-func NewContainer(cfg config.Config) (*Container, error) {
+// NewCLIContainer builds the local CLI dependency graph.
+func NewCLIContainer(cfg config.CLIConfig) (*Container, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
+	return newContainer(runtimeConfig{Vault: cfg.Vault, Logging: cfg.Logging, Index: cfg.Index})
+}
 
+// NewServerContainer builds the HTTP server dependency graph.
+func NewServerContainer(cfg config.ServerConfig) (*Container, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return newContainer(runtimeConfig{Vault: cfg.Vault, Logging: cfg.Logging, Index: cfg.Index})
+}
+
+func newContainer(cfg runtimeConfig) (*Container, error) {
 	log, err := newLogger(cfg.Logging)
 	if err != nil {
 		return nil, err
 	}
 
-	application, closer, err := newConfiguredApplication(cfg, log)
+	deps, err := newLocalDeps(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Container{
-		config: cfg,
 		log:    log,
-		app:    application,
-		closer: closer,
+		app:    newLocalApplication(deps, log),
+		closer: deps.Closer,
 	}, nil
 }
 
-func newConfiguredApplication(cfg config.Config, logger *slog.Logger) (*app.Application, io.Closer, error) {
-	switch cfg.CLI.Mode {
-	case config.CLIModeLocal:
-		deps, err := newLocalDeps(cfg)
-		if err != nil {
-			return nil, nil, err
-		}
-		return newLocalApplication(deps, logger), deps.Closer, nil
-	case config.CLIModeRemote:
-		return nil, nil, fmt.Errorf("remote CLI mode is not available")
-	default:
-		return nil, nil, fmt.Errorf("unsupported CLI mode %q", cfg.CLI.Mode)
-	}
-}
-
-func newLocalDeps(cfg config.Config) (localDeps, error) {
+func newLocalDeps(cfg runtimeConfig) (localDeps, error) {
 	blobs, err := newBlobStore(cfg.Vault)
 	if err != nil {
 		return localDeps{}, err

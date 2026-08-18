@@ -1,4 +1,4 @@
-package cli
+package local
 
 import (
 	"bufio"
@@ -45,7 +45,7 @@ func documentPath(command *urfavecli.Command, argumentName string) (string, erro
 }
 
 func completeDocumentPaths(ctx context.Context, command *urfavecli.Command, state *applicationState) {
-	application, err := state.get()
+	application, err := state.Application()
 	if err != nil {
 		return
 	}

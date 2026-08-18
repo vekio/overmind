@@ -1,4 +1,4 @@
-package cli
+package local
 
 import (
 	"context"
@@ -38,10 +38,10 @@ func TestEditReadsPathFromPipelineAndUpdatesDocument(t *testing.T) {
 		Path: "page/knowledge/page.adoc", Content: []byte("= Page\n"), Revision: "revision-1",
 	}}
 	updateHandler := &updateDocumentHandlerStub{}
-	state := &applicationState{runtime: runtimeStub{application: &app.Application{
+	state := newTestApplicationState(runtimeStub{application: &app.Application{
 		Commands: app.Commands{UpdateDocument: updateHandler},
 		Queries:  app.Queries{GetDocument: getHandler},
-	}}}
+	}})
 	command := newEditCommand(state)
 	command.Reader = strings.NewReader("page/knowledge/page.adoc\tpage\tgo,ddd\n")
 
@@ -64,10 +64,10 @@ func TestEditDoesNotUpdateUnchangedDocument(t *testing.T) {
 		Path: "page/page.adoc", Content: []byte("= Page\n"), Revision: "revision-1",
 	}}
 	updateHandler := &updateDocumentHandlerStub{}
-	state := &applicationState{runtime: runtimeStub{application: &app.Application{
+	state := newTestApplicationState(runtimeStub{application: &app.Application{
 		Commands: app.Commands{UpdateDocument: updateHandler},
 		Queries:  app.Queries{GetDocument: getHandler},
-	}}}
+	}})
 
 	if err := newEditCommand(state).Run(context.Background(), []string{"edit", "page/page.adoc"}); err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -81,12 +81,12 @@ func TestEditPreservesUpdateFailure(t *testing.T) {
 	editorPath := writeEditorScript(t, `printf 'changed' > "$1"`)
 	t.Setenv("VISUAL", editorPath)
 	updateErr := errors.New("document changed since it was read")
-	state := &applicationState{runtime: runtimeStub{application: &app.Application{
+	state := newTestApplicationState(runtimeStub{application: &app.Application{
 		Commands: app.Commands{UpdateDocument: &updateDocumentHandlerStub{err: updateErr}},
 		Queries: app.Queries{GetDocument: &getDocumentHandlerStub{result: getdocument.GetDocumentResult{
 			Path: "page/page.adoc", Content: []byte("old"), Revision: "revision-1",
 		}}},
-	}}}
+	}})
 
 	err := newEditCommand(state).Run(context.Background(), []string{"edit", "page/page.adoc"})
 	if !errors.Is(err, updateErr) {

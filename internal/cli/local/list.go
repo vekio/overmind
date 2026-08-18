@@ -1,4 +1,4 @@
-package cli
+package local
 
 import (
 	"bufio"
@@ -20,7 +20,7 @@ func newListCommand(state *applicationState) *urfavecli.Command {
 			if command.NArg() != 0 {
 				return fmt.Errorf("unexpected arguments: %q", command.Args().Slice())
 			}
-			application, err := state.get()
+			application, err := state.Application()
 			if err != nil {
 				return err
 			}
