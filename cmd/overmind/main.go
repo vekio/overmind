@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"git.casta.me/alberto/overmind/internal/bootstrap"
-	localcli "git.casta.me/alberto/overmind/internal/cli/local"
+	overmindcli "git.casta.me/alberto/overmind/internal/cli"
 	"git.casta.me/alberto/overmind/internal/config"
 )
 
@@ -16,8 +16,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	command, err := localcli.NewCommand(func(cfg config.CLIConfig) (localcli.Runtime, error) {
-		return bootstrap.NewCLIContainer(cfg)
+	command, err := overmindcli.New(func(cfg config.Config) (overmindcli.Runtime, error) {
+		return bootstrap.New(cfg)
 	})
 	if err == nil {
 		err = command.Run(ctx, os.Args)

@@ -228,8 +228,10 @@ github.com/tursodatabase/libsql-client-go v0.0.0-20251219100830-236aa1ff8acc h1:
 github.com/tursodatabase/libsql-client-go v0.0.0-20251219100830-236aa1ff8acc/go.mod h1:08inkKyguB6CGGssc/JzhmQWwBgFQBgjlYFjxjRh7nU=
 github.com/urfave/cli/v3 v3.11.0 h1:P/euJp99kb9p0tlVY+iYTLYYTAQlfl0hR2gUO1Img1Q=
 github.com/urfave/cli/v3 v3.11.0/go.mod h1:ysVLtOEmg2tOy6PknnYVhDoouyC/6N42TMeoMzskhso=
-github.com/vekio/config v0.2.0 h1:mOJpYGtnExHhmsAqDDpp4t2XZxDKt3eiMLFAtk62x+E=
-github.com/vekio/config v0.2.0/go.mod h1:TJ7v9dt/llM2g4TdznHV+LiGedfMgXN7xk1Naxt2p+I=
+github.com/vekio/config v0.5.0 h1:MbM00rGJbbMK00hHuXR8WhcvLdh3pIdbLC0TbJPZZT8=
+github.com/vekio/config v0.5.0/go.mod h1:bHmC0k3yokE1llI7gbRciZmoUPpSGIeFFRQczwPqQog=
+github.com/vekio/config/urfave v0.3.0 h1:9tYdzVyxWAsqYeNmq1LEaQIgBQxyyfmLoMtEsvDitZc=
+github.com/vekio/config/urfave v0.3.0/go.mod h1:hX/LmjAeSHxiDdACYA7ELLlhEdN+y4ngB1GxDf+xrFI=
 github.com/vekio/x v0.0.1 h1:lzFwlM0bbuhAgWMKdytFkX7S9JVEM2b94JZlmHI7UV0=
 github.com/vekio/x v0.0.1/go.mod h1:C1/qVGQF0d3ObOQIn7JVI8ECQP3okrfjNQLnjQ8ZHuo=
 github.com/vertica/vertica-sql-go v1.3.6 h1:uDJPdBivsI5EwfX3NMDWZaQlVs9zTnVyxE/nYhr3bY0=

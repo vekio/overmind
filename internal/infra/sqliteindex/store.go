@@ -18,7 +18,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/infrastructure/sqliteindex/sqlitedb"
+	"git.casta.me/alberto/overmind/internal/infra/sqliteindex/sqlitedb"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
 

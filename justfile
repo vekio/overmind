@@ -1,103 +1,93 @@
-set unstable
-set lists
+set default-list
 
-cli_binary_name := "overmind"
-server_binary_name := "overmind-server"
 build_dir := "bin"
+cli_binary_name := "overmind"
 cli_main_package := "./cmd/overmind"
-server_main_package := "./cmd/overmind-server"
-development_cli_config := "./config.yml"
-development_server_config := "./server.config.yml"
-
-# List available recipes
-[group('help')]
-default:
-    @just --list
+cli_config := justfile_directory() + "/config.yml"
 
 # Run all unit tests, examples, and saved fuzz regression cases
-[group('quality')]
+[group('tests')]
 test:
     go test ./...
 
 # Run all tests with Go's race detector
-[group('quality')]
+[group('tests')]
 test-race:
     go test -race ./...
 
-# Generate and report statement coverage for the AsciiDoc lexer
-[group('quality')]
+# Report statement coverage for all project packages
+[group('tests')]
 coverage:
-    go test -coverprofile=coverage.out ./pkg/asciidoc/lexer
+    go test -coverprofile=coverage.out ./...
     go tool cover -func=coverage.out
 
 # Actively fuzz exact source reconstruction
-[group('quality')]
+[group('tests')]
 fuzz-scanner duration="10s":
     go test ./pkg/asciidoc/lexer -run '^$' -fuzz '^FuzzScannerReconstructsSource$' -fuzztime "{{ duration }}"
 
 # Actively fuzz line classification
-[group('quality')]
+[group('tests')]
 fuzz-match duration="10s":
     go test ./pkg/asciidoc/lexer -run '^$' -fuzz '^FuzzMatchLinePreservesRaw$' -fuzztime "{{ duration }}"
 
 # Actively run every fuzz target sequentially
-[group('quality')]
+[group('tests')]
 fuzz duration="10s":
     just fuzz-scanner "{{ duration }}"
     just fuzz-match "{{ duration }}"
 
-# Run formatting checks, vet, and tests
+# Check that go.mod and go.sum are tidy without changing them
 [group('quality')]
-check: fmt-check vet test
+mod-tidy-check:
+    go mod tidy -diff
+
+# Run all repository quality checks after regenerating SQLC code
+[group('quality')]
+check: sqlc fmt-check mod-tidy-check vet test
 
 # Format Go code
 [group('quality')]
 fmt:
-    gofmt -w cmd internal pkg
+    go fmt ./...
 
 # Check that Go code is formatted
 [group('quality')]
 fmt-check:
-    @files="$(gofmt -l cmd internal pkg)"; if [ -n "$files" ]; then printf '%s\n' "$files"; exit 1; fi
+    @files="$(gofmt -l $(rg --files -g '*.go'))"; if [ -n "$files" ]; then printf '%s\n' "$files"; exit 1; fi
 
-# Run go vet
+# Run Go's static analysis
 [group('quality')]
 vet:
     go vet ./...
 
-# Regenerate the type-safe SQLite query layer
+# Generate the type-safe SQLite access layer from schema and queries
 [group('generation')]
-generate:
+sqlc:
     go tool sqlc generate
 
-# Create a new sequential SQLite migration
+# Create a new sequential SQL migration: just migration add_something
 [group('database')]
 migration name:
-    go tool goose -dir internal/infrastructure/sqliteindex/migrations -s create {{ name }} sql
+    go tool goose -dir internal/infra/sqliteindex/migrations -s create "{{ name }}" sql
 
-# Build the CLI and server binaries into ./bin
+# Generate code, run checks, and compile the CLI binary
 [group('artifacts')]
 build: check
     mkdir -p {{ build_dir }}
     go build -o {{ build_dir }}/{{ cli_binary_name }} {{ cli_main_package }}
-    go build -o {{ build_dir }}/{{ server_binary_name }} {{ server_main_package }}
 
-# Install the CLI and server binaries into GOPATH/bin or GOBIN
+# Install the CLI binary into GOPATH/bin or GOBIN
 [group('artifacts')]
 install: check
-    go install {{ cli_main_package }} {{ server_main_package }}
+    go install {{ cli_main_package }}
 
-# Run the CLI; pass arguments directly after `run`
+# Run the Overmind CLI and forward its arguments
 [group('development')]
 run *args:
-    go run {{ cli_main_package }} --config {{ development_cli_config }} {{ quote(args) }}
-
-# Run an overmind-server subcommand; defaults to `serve`
-[group('development')]
-server *args="serve":
-    go run {{ server_main_package }} --config {{ development_server_config }} {{ quote(args) }}
+    OVERMIND_CONFIG_FILE="{{ cli_config }}" go run {{ cli_main_package }} {{ args }}
 
 # Remove build artifacts
 [group('artifacts')]
 clean:
-    rm -rf {{ build_dir }}
+    rm -rf "{{ build_dir }}"

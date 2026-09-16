@@ -1,4 +1,4 @@
-package local
+package cli
 
 import (
 	"context"
@@ -21,7 +21,10 @@ func newPageCommand(state *applicationState) *urfavecli.Command {
 				Max:       1,
 			},
 		},
-		Flags: []urfavecli.Flag{areaFlag(), tagFlag()},
+		Flags: []urfavecli.Flag{
+			areaFlag(),
+			tagFlag("add `TAG`; repeatable"),
+		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			titleArguments := command.StringArgs("title")
 			if command.NArg() != 0 {
@@ -53,7 +56,7 @@ func areaFlag() urfavecli.Flag {
 	return &urfavecli.StringFlag{
 		Name:    "area",
 		Aliases: []string{"a"},
-		Usage:   "page area",
+		Usage:   "organize under `AREA`",
 		Config:  urfavecli.StringConfig{TrimSpace: true},
 	}
 }

@@ -1,4 +1,4 @@
-package local
+package cli
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ func (handler *rebuildIndexHandlerStub) Handle(context.Context, rebuildindex.Reb
 func TestIndexRebuildExecutesLocalUseCase(t *testing.T) {
 	configPath := writeLocalConfig(t)
 	handler := &rebuildIndexHandlerStub{result: rebuildindex.RebuildIndexResult{Documents: 2}}
-	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
+	command := newTestCommand(t, func(config.Config) (Runtime, error) {
 		return runtimeStub{application: &app.Application{
 			Commands: app.Commands{RebuildIndex: handler},
 		}}, nil

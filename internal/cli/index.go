@@ -1,4 +1,4 @@
-package shared
+package cli
 
 import (
 	"context"
@@ -8,12 +8,10 @@ import (
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-// NewIndexCommand creates the index administration command shared by both
-// binaries.
-func NewIndexCommand[T any](state *State[T], usage string) *urfavecli.Command {
+func newIndexCommand(state *applicationState) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:  "index",
-		Usage: usage,
+		Usage: "manage the local document index",
 		Commands: []*urfavecli.Command{
 			{
 				Name:  "rebuild",

@@ -1,8 +1,6 @@
-package server
+package cli
 
 import (
-	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,33 +15,38 @@ type runtimeStub struct {
 }
 
 func (runtime runtimeStub) Application() *app.Application { return runtime.application }
-func (runtime runtimeStub) Logger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
-}
+
 func (runtime runtimeStub) Close() error { return nil }
+
+func newTestApplicationState(runtime Runtime) *applicationState {
+	state := newApplicationState()
+	err := state.Initialize(config.Config{}, func(config.Config) (Runtime, error) {
+		return runtime, nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	return state
+}
 
 func newTestCommand(
 	t *testing.T,
-	build func(config.ServerConfig) (Runtime, error),
+	build func(config.Config) (Runtime, error),
 ) *urfavecli.Command {
 	t.Helper()
-	command, err := NewCommand(build)
+	command, err := New(build)
 	if err != nil {
-		t.Fatalf("NewCommand() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	return command
 }
 
-func writeServerConfig(t *testing.T) string {
+func writeLocalConfig(t *testing.T) string {
 	t.Helper()
 	configPath := filepath.Join(t.TempDir(), "config.yml")
 	if err := os.WriteFile(configPath, []byte(`vault:
   driver: local
   localRoot: ./vault
-logging:
-  level: info
-http:
-  address: 127.0.0.1:8080
 index:
   driver: sqlite
   path: ./index.db

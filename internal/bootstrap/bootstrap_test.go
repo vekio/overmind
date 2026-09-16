@@ -14,30 +14,26 @@ import (
 	"git.casta.me/alberto/overmind/internal/config"
 )
 
-func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
+func TestRuntimeCreatesAnAsciiDocPage(t *testing.T) {
 	root := t.TempDir()
-	container, err := NewCLIContainer(config.CLIConfig{
-		Vault:   config.Vault{Driver: "local", RootPath: root},
-		Logging: config.Logging{Level: "info"},
-		Index:   config.Index{Driver: "sqlite", Path: filepath.Join(root, "index.db")},
+	runtime, err := New(config.Config{
+		Vault: config.Vault{Driver: "local", RootPath: root},
+		Index: config.Index{Driver: "sqlite", Path: filepath.Join(root, "index.db")},
 	})
 	if err != nil {
-		t.Fatalf("NewCLIContainer() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	t.Cleanup(func() {
-		if err := container.Close(); err != nil {
+		if err := runtime.Close(); err != nil {
 			t.Errorf("Close() error = %v", err)
 		}
 	})
 
-	if container.log == nil {
-		t.Fatal("Container.Log = nil")
-	}
-	if container.app == nil {
-		t.Fatal("Container.App = nil")
+	if runtime.app == nil {
+		t.Fatal("Runtime.app = nil")
 	}
 
-	result, err := container.app.Commands.CreatePage.Handle(context.Background(), createpage.CreatePageCommand{
+	result, err := runtime.app.Commands.CreatePage.Handle(context.Background(), createpage.CreatePageCommand{
 		Title: "First page",
 		Area:  "Knowledge",
 	})
@@ -54,7 +50,7 @@ func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 	if got := string(content); !strings.HasPrefix(got, "= First page\n:overmind-id: ") {
 		t.Fatalf("page content = %q", got)
 	}
-	retrieved, err := container.app.Queries.GetDocument.Handle(context.Background(), getdocument.GetDocumentQuery{
+	retrieved, err := runtime.app.Queries.GetDocument.Handle(context.Background(), getdocument.GetDocumentQuery{
 		Path: "page/knowledge/first-page.adoc",
 	})
 	if err != nil {
@@ -64,7 +60,7 @@ func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 		t.Fatalf("retrieved document = %+v", retrieved)
 	}
 	editedContent := []byte(strings.Replace(string(retrieved.Content), "= First page", "= Updated page", 1))
-	updated, err := container.app.Commands.UpdateDocument.Handle(context.Background(), updatedocument.UpdateDocumentCommand{
+	updated, err := runtime.app.Commands.UpdateDocument.Handle(context.Background(), updatedocument.UpdateDocumentCommand{
 		Path:             retrieved.Path,
 		Content:          editedContent,
 		ExpectedRevision: retrieved.Revision,
@@ -79,7 +75,7 @@ func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 	if err != nil || string(storedContent) != string(editedContent) {
 		t.Fatalf("stored edited content = %q, error = %v", storedContent, err)
 	}
-	listed, err := container.app.Queries.ListDocuments.Handle(context.Background(), listdocuments.ListDocumentsQuery{
+	listed, err := runtime.app.Queries.ListDocuments.Handle(context.Background(), listdocuments.ListDocumentsQuery{
 		Type: "page",
 	})
 	if err != nil {
@@ -87,22 +83,5 @@ func TestContainerCreatesAnAsciiDocPage(t *testing.T) {
 	}
 	if len(listed.Documents) != 1 || listed.Documents[0].Path != "page/knowledge/first-page.adoc" {
 		t.Fatalf("listed documents = %+v", listed.Documents)
-	}
-}
-
-func TestServerContainerBuildsApplication(t *testing.T) {
-	root := t.TempDir()
-	container, err := NewServerContainer(config.ServerConfig{
-		Vault:   config.Vault{Driver: "local", RootPath: root},
-		Logging: config.Logging{Level: "info"},
-		HTTP:    config.HTTP{Address: "127.0.0.1:8080"},
-		Index:   config.Index{Driver: "sqlite", Path: filepath.Join(root, "index.db")},
-	})
-	if err != nil {
-		t.Fatalf("NewServerContainer() error = %v", err)
-	}
-	t.Cleanup(func() { _ = container.Close() })
-	if container.Application() == nil || container.Logger() == nil {
-		t.Fatalf("container = %#v", container)
 	}
 }

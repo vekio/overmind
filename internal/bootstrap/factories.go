@@ -3,15 +3,13 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"os"
 
 	"git.casta.me/alberto/overmind/internal/config"
-	"git.casta.me/alberto/overmind/internal/infrastructure/gotemplate"
-	"git.casta.me/alberto/overmind/internal/infrastructure/localfs"
-	"git.casta.me/alberto/overmind/internal/infrastructure/sqliteindex"
-	"git.casta.me/alberto/overmind/internal/infrastructure/systemclock"
-	"git.casta.me/alberto/overmind/internal/infrastructure/uuidgenerator"
+	"git.casta.me/alberto/overmind/internal/infra/gotemplate"
+	"git.casta.me/alberto/overmind/internal/infra/localfs"
+	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
+	"git.casta.me/alberto/overmind/internal/infra/systemclock"
+	"git.casta.me/alberto/overmind/internal/infra/uuidgenerator"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
 
@@ -21,27 +19,6 @@ func newClock() ports.Clock {
 
 func newIDGenerator() ports.IDGenerator {
 	return uuidgenerator.New()
-}
-
-func newLogger(cfg config.Logging) (*slog.Logger, error) {
-	var level slog.Level
-
-	switch cfg.Level {
-	case "debug":
-		level = slog.LevelDebug
-	case "info":
-		level = slog.LevelInfo
-	case "warn":
-		level = slog.LevelWarn
-	case "error":
-		level = slog.LevelError
-	default:
-		return nil, fmt.Errorf("unsupported log level %q", cfg.Level)
-	}
-
-	return slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level: level,
-	})), nil
 }
 
 func newBlobStore(cfg config.Vault) (ports.BlobStore, error) {

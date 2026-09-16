@@ -2,8 +2,7 @@ package createpage
 
 import "git.casta.me/alberto/overmind/internal/domain"
 
-// CreatePageCommand is the input shared by CLI, HTTP, and future input
-// adapters.
+// CreatePageCommand is the input of creating a page.
 type CreatePageCommand struct {
 	Title string
 	Area  string

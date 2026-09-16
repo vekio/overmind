@@ -1,4 +1,4 @@
-package local
+package cli
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ func TestListDocumentsWritesPipelineFriendlyTSV(t *testing.T) {
 		{ID: firstID, Path: "page/first.adoc", Type: domain.DocumentKindPage, Tags: []string{"go", "ddd"}},
 		{ID: secondID, Path: "page/second.adoc", Type: domain.DocumentKindPage},
 	}}}
-	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
+	command := newTestCommand(t, func(config.Config) (Runtime, error) {
 		return runtimeStub{application: &app.Application{
 			Queries: app.Queries{ListDocuments: handler},
 		}}, nil

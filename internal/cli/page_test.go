@@ -1,4 +1,4 @@
-package local
+package cli
 
 import (
 	"bytes"
@@ -47,8 +47,6 @@ func TestCreatePageLoadsConfigAndExecutesUseCase(t *testing.T) {
 	if err := os.WriteFile(configPath, []byte(`vault:
   driver: local
   localRoot: ./vault
-logging:
-  level: info
 index:
   driver: sqlite
   path: ./index.db
@@ -57,8 +55,8 @@ index:
 	}
 
 	handler := &createPageHandlerStub{}
-	var selectedConfig config.CLIConfig
-	command := newTestCommand(t, func(cfg config.CLIConfig) (Runtime, error) {
+	var selectedConfig config.Config
+	command := newTestCommand(t, func(cfg config.Config) (Runtime, error) {
 		selectedConfig = cfg
 		return runtimeStub{application: &app.Application{
 			Commands: app.Commands{CreatePage: handler},
@@ -68,7 +66,7 @@ index:
 	command.Writer = &output
 
 	err := command.Run(context.Background(), []string{
-		"overmind", "--config", configPath, "--debug",
+		"overmind", "--config", configPath,
 		"page", "First page", "--area", "Knowledge/Go", "--tag", "Go", "--tag", "DDD",
 	})
 	if err != nil {
@@ -76,9 +74,6 @@ index:
 	}
 	if selectedConfig.Vault.RootPath != "./vault" {
 		t.Fatalf("selected root = %q", selectedConfig.Vault.RootPath)
-	}
-	if selectedConfig.Logging.Level != "debug" {
-		t.Fatalf("selected logging level = %q", selectedConfig.Logging.Level)
 	}
 	if handler.command.Title != "First page" || handler.command.Area != "Knowledge/Go" || len(handler.command.Tags) != 2 || handler.command.Tags[0] != "Go" || handler.command.Tags[1] != "DDD" {
 		t.Fatalf("use-case command = %+v", handler.command)
@@ -95,8 +90,8 @@ func TestCreatePageCreatesAndLoadsDefaultConfig(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", dataHome)
 
 	handler := &createPageHandlerStub{}
-	var selectedConfig config.CLIConfig
-	command := newTestCommand(t, func(cfg config.CLIConfig) (Runtime, error) {
+	var selectedConfig config.Config
+	command := newTestCommand(t, func(cfg config.Config) (Runtime, error) {
 		selectedConfig = cfg
 		return runtimeStub{application: &app.Application{
 			Commands: app.Commands{CreatePage: handler},
@@ -118,7 +113,7 @@ func TestCreatePageCreatesAndLoadsDefaultConfig(t *testing.T) {
 func TestCreatePageDoesNotCreateExplicitMissingConfig(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "missing.yml")
 	built := false
-	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
+	command := newTestCommand(t, func(config.Config) (Runtime, error) {
 		built = true
 		return runtimeStub{application: &app.Application{}}, nil
 	})

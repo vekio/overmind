@@ -1,8 +1,6 @@
 vault:
   driver: local
   localRoot: ./.overmind/vault
-logging:
-  level: info
 index:
   driver: sqlite
   path: ./.overmind/index.db

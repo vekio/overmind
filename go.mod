@@ -1,16 +1,13 @@
 module git.casta.me/alberto/overmind
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/urfave/cli/v3 v3.11.0
-	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
-)
-
-require (
 	github.com/pressly/goose/v3 v3.27.2
-	github.com/vekio/config v0.2.0
+	github.com/urfave/cli/v3 v3.11.0
+	github.com/vekio/config v0.5.0
+	github.com/vekio/config/urfave v0.3.0
 	golang.org/x/text v0.41.0
 	modernc.org/sqlite v1.53.0
 )
@@ -86,6 +83,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/net v0.55.0 // indirect

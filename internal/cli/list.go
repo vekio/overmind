@@ -1,4 +1,4 @@
-package local
+package cli
 
 import (
 	"bufio"
@@ -15,7 +15,10 @@ func newListCommand(state *applicationState) *urfavecli.Command {
 		Name:    "ls",
 		Aliases: []string{"list"},
 		Usage:   "list indexed documents",
-		Flags:   []urfavecli.Flag{documentTypeFlag(), tagFlag()},
+		Flags: []urfavecli.Flag{
+			documentTypeFlag(),
+			tagFlag("filter by `TAG`; repeatable"),
+		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			if command.NArg() != 0 {
 				return fmt.Errorf("unexpected arguments: %q", command.Args().Slice())

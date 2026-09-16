@@ -2,8 +2,7 @@
 package app
 
 // Application groups the use-case handlers exposed by Overmind. It contains
-// no transport or infrastructure logic; CLI and HTTP may consume the same
-// instance.
+// no transport or infrastructure logic; adapters consume the same instance.
 type Application struct {
 	Commands Commands
 	Queries  Queries

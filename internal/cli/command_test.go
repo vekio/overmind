@@ -1,4 +1,4 @@
-package local
+package cli
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ func TestAsciiDocCommandDoesNotLoadApplicationConfiguration(t *testing.T) {
 	}
 
 	built := false
-	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
+	command := newTestCommand(t, func(config.Config) (Runtime, error) {
 		built = true
 		return runtimeStub{application: &app.Application{}}, nil
 	})
@@ -38,7 +38,7 @@ func TestConfigInitDoesNotBuildApplication(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", dataHome)
 
 	built := false
-	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
+	command := newTestCommand(t, func(config.Config) (Runtime, error) {
 		built = true
 		return runtimeStub{application: &app.Application{}}, nil
 	})

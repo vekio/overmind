@@ -1,4 +1,4 @@
-package local
+package cli
 
 import (
 	"bytes"
@@ -38,7 +38,7 @@ func TestShowWritesRawDocumentByPath(t *testing.T) {
 	handler := &getDocumentHandlerStub{result: getdocument.GetDocumentResult{
 		Path: "page/knowledge/page.adoc", Content: []byte("= Page\n"),
 	}}
-	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
+	command := newTestCommand(t, func(config.Config) (Runtime, error) {
 		return runtimeStub{application: &app.Application{
 			Queries: app.Queries{GetDocument: handler},
 		}}, nil
@@ -89,7 +89,7 @@ func TestShowCompletesIndexedPathPrefix(t *testing.T) {
 	handler := &showListDocumentsHandlerStub{result: listdocuments.ListDocumentsResult{Documents: []listdocuments.DocumentSummary{{
 		ID: id, Path: "page/development/go.adoc", Type: domain.DocumentKindPage,
 	}}}}
-	command := newTestCommand(t, func(config.CLIConfig) (Runtime, error) {
+	command := newTestCommand(t, func(config.Config) (Runtime, error) {
 		return runtimeStub{application: &app.Application{
 			Queries: app.Queries{ListDocuments: handler},
 		}}, nil
