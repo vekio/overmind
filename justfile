@@ -64,12 +64,12 @@ vet:
 # Generate the type-safe SQLite access layer from schema and queries
 [group('generation')]
 sqlc:
-    go tool sqlc generate
+    sqlc generate
 
 # Create a new sequential SQL migration: just migration add_something
 [group('database')]
 migration name:
-    go tool goose -dir internal/infra/sqliteindex/migrations -s create "{{ name }}" sql
+    goose -dir internal/infra/sqliteindex/migrations -s create "{{ name }}" sql
 
 # Generate code, run checks, and compile the CLI binary
 [group('artifacts')]
