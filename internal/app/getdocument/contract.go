@@ -1,14 +1,16 @@
 // Package getdocument implements retrieving a document from its source store.
 package getdocument
 
-// GetDocumentQuery identifies a document by its store-relative path.
+import "git.casta.me/alberto/overmind/internal/domain"
+
+// GetDocumentQuery identifies a document by its stable ID.
 type GetDocumentQuery struct {
-	Path string
+	ID domain.DocumentID
 }
 
 // GetDocumentResult contains the raw source document.
 type GetDocumentResult struct {
-	Path     string
+	ID       domain.DocumentID
 	Content  []byte
 	Revision string
 }

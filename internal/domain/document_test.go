@@ -2,6 +2,7 @@ package domain
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 )
 
@@ -12,6 +13,14 @@ func TestNewDocumentIDNormalizesAndReturnsValue(t *testing.T) {
 	}
 	if got, want := id.String(), "page-id"; got != want {
 		t.Fatalf("DocumentID.String() = %q, want %q", got, want)
+	}
+}
+
+func TestNewDocumentIDRejectsValuesUnsafeForStorage(t *testing.T) {
+	for _, value := range []string{"../page", "page/id", `page\id`, "page.adoc"} {
+		if _, err := NewDocumentID(value); !errors.Is(err, ErrInvalidDocumentID) {
+			t.Fatalf("NewDocumentID(%q) error = %v", value, err)
+		}
 	}
 }
 

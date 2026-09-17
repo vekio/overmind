@@ -2,9 +2,8 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
+	"path/filepath"
 
-	"git.casta.me/alberto/overmind/internal/config"
 	"git.casta.me/alberto/overmind/internal/infra/gotemplate"
 	"git.casta.me/alberto/overmind/internal/infra/localfs"
 	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
@@ -21,22 +20,12 @@ func newIDGenerator() ports.IDGenerator {
 	return uuidgenerator.New()
 }
 
-func newBlobStore(cfg config.Vault) (ports.BlobStore, error) {
-	switch cfg.Driver {
-	case "local":
-		return localfs.New(cfg.RootPath), nil
-	default:
-		return nil, fmt.Errorf("unsupported vault driver %q", cfg.Driver)
-	}
+func newBlobStore(dataDir string) ports.BlobStore {
+	return localfs.New(filepath.Join(dataDir, "documents"))
 }
 
-func newDocumentIndex(cfg config.Index) (*sqliteindex.Store, error) {
-	switch cfg.Driver {
-	case "sqlite":
-		return sqliteindex.New(context.Background(), cfg.Path)
-	default:
-		return nil, fmt.Errorf("unsupported index driver %q", cfg.Driver)
-	}
+func newDocumentIndex(dataDir string) (*sqliteindex.Store, error) {
+	return sqliteindex.New(context.Background(), filepath.Join(dataDir, "index.db"))
 }
 
 func newRenderer() (ports.Renderer, error) {

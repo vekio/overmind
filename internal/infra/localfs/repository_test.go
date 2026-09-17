@@ -5,261 +5,93 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
+	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
 
-func TestStoreCreateGetListDelete(t *testing.T) {
-	ctx := context.Background()
-	store := New(t.TempDir())
-
-	blob := ports.Blob{
-		Path:    "notes/first.adoc",
-		Content: []byte("= First\n"),
+func documentID(t *testing.T, value string) domain.DocumentID {
+	t.Helper()
+	id, err := domain.NewDocumentID(value)
+	if err != nil {
+		t.Fatalf("NewDocumentID() error = %v", err)
 	}
+	return id
+}
+
+func TestStorePersistsDocumentsByID(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	store := New(root)
+	id := documentID(t, "page-id")
+	blob := ports.Blob{ID: id, Content: []byte("= Page\n")}
+
 	if err := store.Create(ctx, blob); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-
-	got, err := store.Get(ctx, "notes//first.adoc")
-	if err != nil {
-		t.Fatalf("Get() error = %v", err)
+	if _, err := os.Stat(filepath.Join(root, "page-id.adoc")); err != nil {
+		t.Fatalf("stored file error = %v", err)
 	}
-	if got.Path != blob.Path {
-		t.Fatalf("Get() Path = %q, want %q", got.Path, blob.Path)
+	got, err := store.Get(ctx, id)
+	if err != nil || got.ID != id || string(got.Content) != string(blob.Content) || got.Revision == "" {
+		t.Fatalf("Get() = (%+v, %v)", got, err)
 	}
-	if string(got.Content) != string(blob.Content) {
-		t.Fatalf("Get() Content = %q, want %q", got.Content, blob.Content)
+	ids, err := store.List(ctx)
+	if err != nil || len(ids) != 1 || ids[0] != id {
+		t.Fatalf("List() = (%v, %v)", ids, err)
 	}
-
-	paths, err := store.List(ctx, ports.BlobFilter{})
-	if err != nil {
-		t.Fatalf("List() error = %v", err)
-	}
-	if want := []string{"notes/first.adoc"}; !reflect.DeepEqual(paths, want) {
-		t.Fatalf("List() = %v, want %v", paths, want)
-	}
-
-	if err := store.Delete(ctx, blob.Path); err != nil {
+	if err := store.Delete(ctx, id); err != nil {
 		t.Fatalf("Delete() error = %v", err)
 	}
-	if _, err := store.Get(ctx, blob.Path); !errors.Is(err, ports.ErrBlobNotFound) {
-		t.Fatalf("Get() error = %v, want %v", err, ports.ErrBlobNotFound)
-	}
-}
-
-func TestStoreCreateFailsWhenBlobAlreadyExists(t *testing.T) {
-	ctx := context.Background()
-	store := New(t.TempDir())
-
-	blob := ports.Blob{Path: "note.adoc", Content: []byte("old")}
-	if err := store.Create(ctx, blob); err != nil {
-		t.Fatalf("Create() error = %v", err)
-	}
-
-	if err := store.Create(ctx, ports.Blob{Path: "note.adoc", Content: []byte("new")}); !errors.Is(err, ports.ErrBlobAlreadyExists) {
-		t.Fatalf("Create() error = %v, want %v", err, ports.ErrBlobAlreadyExists)
-	}
-}
-
-func TestStorePutReplacesExistingBlob(t *testing.T) {
-	ctx := context.Background()
-	store := New(t.TempDir())
-
-	if err := store.Put(ctx, ports.Blob{Path: "note.adoc", Content: []byte("old")}); err != nil {
-		t.Fatalf("Put(old) error = %v", err)
-	}
-	if err := store.Put(ctx, ports.Blob{Path: "note.adoc", Content: []byte("new")}); err != nil {
-		t.Fatalf("Put(new) error = %v", err)
-	}
-
-	got, err := store.Get(ctx, "note.adoc")
-	if err != nil {
+	if _, err := store.Get(ctx, id); !errors.Is(err, ports.ErrBlobNotFound) {
 		t.Fatalf("Get() error = %v", err)
 	}
-	if string(got.Content) != "new" {
-		t.Fatalf("Get() Content = %q, want %q", got.Content, "new")
-	}
 }
 
-func TestStoreUpdateReplacesBlobWithMatchingRevision(t *testing.T) {
-	ctx := context.Background()
+func TestStoreCreateDoesNotReplaceExistingDocument(t *testing.T) {
 	store := New(t.TempDir())
-	if err := store.Create(ctx, ports.Blob{Path: "note.adoc", Content: []byte("old")}); err != nil {
+	id := documentID(t, "page-id")
+	if err := store.Create(context.Background(), ports.Blob{ID: id, Content: []byte("old")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Create(context.Background(), ports.Blob{ID: id, Content: []byte("new")}); !errors.Is(err, ports.ErrBlobAlreadyExists) {
 		t.Fatalf("Create() error = %v", err)
 	}
-	current, err := store.Get(ctx, "note.adoc")
-	if err != nil {
-		t.Fatalf("Get() error = %v", err)
-	}
-	if current.Revision == "" {
-		t.Fatal("Get() returned an empty revision")
-	}
-
-	revision, err := store.Update(ctx, ports.Blob{Path: "note.adoc", Content: []byte("new")}, current.Revision)
-	if err != nil {
-		t.Fatalf("Update() error = %v", err)
-	}
-	updated, err := store.Get(ctx, "note.adoc")
-	if err != nil {
-		t.Fatalf("Get(updated) error = %v", err)
-	}
-	if string(updated.Content) != "new" || updated.Revision != revision || revision == current.Revision {
-		t.Fatalf("updated blob = %+v, returned revision = %q", updated, revision)
-	}
 }
 
-func TestStoreUpdateRejectsStaleRevision(t *testing.T) {
+func TestStorePutAndUpdateReplaceCompleteDocument(t *testing.T) {
 	ctx := context.Background()
 	store := New(t.TempDir())
-	if err := store.Create(ctx, ports.Blob{Path: "note.adoc", Content: []byte("old")}); err != nil {
-		t.Fatalf("Create() error = %v", err)
+	id := documentID(t, "page-id")
+	if err := store.Put(ctx, ports.Blob{ID: id, Content: []byte("old")}); err != nil {
+		t.Fatal(err)
 	}
-
-	_, err := store.Update(ctx, ports.Blob{Path: "note.adoc", Content: []byte("new")}, "stale")
-	if !errors.Is(err, ports.ErrBlobChanged) {
-		t.Fatalf("Update() error = %v, want %v", err, ports.ErrBlobChanged)
+	current, _ := store.Get(ctx, id)
+	revision, err := store.Update(ctx, ports.Blob{ID: id, Content: []byte("new")}, current.Revision)
+	if err != nil || revision == current.Revision {
+		t.Fatalf("Update() = (%q, %v)", revision, err)
 	}
-	current, getErr := store.Get(ctx, "note.adoc")
-	if getErr != nil || string(current.Content) != "old" {
-		t.Fatalf("Get() = (%+v, %v), want unchanged content", current, getErr)
+	updated, _ := store.Get(ctx, id)
+	if string(updated.Content) != "new" || updated.Revision != revision {
+		t.Fatalf("updated = %+v", updated)
 	}
-}
-
-func TestStoreUpdateRequiresExistingBlob(t *testing.T) {
-	store := New(t.TempDir())
-	_, err := store.Update(context.Background(), ports.Blob{Path: "missing.adoc"}, "revision")
-	if !errors.Is(err, ports.ErrBlobNotFound) {
-		t.Fatalf("Update() error = %v, want %v", err, ports.ErrBlobNotFound)
+	if _, err := store.Update(ctx, ports.Blob{ID: id, Content: []byte("stale")}, current.Revision); !errors.Is(err, ports.ErrBlobChanged) {
+		t.Fatalf("Update(stale) error = %v", err)
 	}
 }
 
-func TestStoreAllowsEmptyBlobContent(t *testing.T) {
-	ctx := context.Background()
-	store := New(t.TempDir())
-
-	if err := store.Create(ctx, ports.Blob{Path: "empty.adoc"}); err != nil {
-		t.Fatalf("Create() error = %v", err)
-	}
-
-	got, err := store.Get(ctx, "empty.adoc")
-	if err != nil {
-		t.Fatalf("Get() error = %v", err)
-	}
-	if len(got.Content) != 0 {
-		t.Fatalf("Get() Content length = %d, want 0", len(got.Content))
-	}
-}
-
-func TestStoreRejectsInvalidBlobPaths(t *testing.T) {
-	ctx := context.Background()
-	store := New(t.TempDir())
-
-	for _, blobPath := range []string{
-		"",
-		"/absolute.adoc",
-		"../outside.adoc",
-		"notes/../../outside.adoc",
-		`notes\windows.adoc`,
-	} {
-		t.Run(blobPath, func(t *testing.T) {
-			err := store.Put(ctx, ports.Blob{Path: blobPath, Content: []byte("content")})
-			if !errors.Is(err, ports.ErrInvalidBlobPath) {
-				t.Fatalf("Put() error = %v, want %v", err, ports.ErrInvalidBlobPath)
-			}
-		})
-	}
-}
-
-func TestStoreDoesNotFollowSymlinksOutsideRoot(t *testing.T) {
-	ctx := context.Background()
-	root := t.TempDir()
-	outside := t.TempDir()
-	store := New(root)
-
-	outsidePath := filepath.Join(outside, "outside.adoc")
-	if err := os.WriteFile(outsidePath, []byte("outside"), 0o644); err != nil {
-		t.Fatalf("os.WriteFile(outside) error = %v", err)
-	}
-	if err := os.Symlink(outside, filepath.Join(root, "escape")); err != nil {
-		t.Fatalf("os.Symlink() error = %v", err)
-	}
-
-	if _, err := store.Get(ctx, "escape/outside.adoc"); err == nil {
-		t.Fatal("Get() error = nil, want root escape error")
-	}
-	if err := store.Put(ctx, ports.Blob{Path: "escape/outside.adoc", Content: []byte("changed")}); err == nil {
-		t.Fatal("Put() error = nil, want root escape error")
-	}
-
-	content, err := os.ReadFile(outsidePath)
-	if err != nil {
-		t.Fatalf("os.ReadFile(outside) error = %v", err)
-	}
-	if got, want := string(content), "outside"; got != want {
-		t.Fatalf("outside content = %q, want %q", got, want)
-	}
-
-	paths, err := store.List(ctx, ports.BlobFilter{})
-	if err != nil {
-		t.Fatalf("List() error = %v", err)
-	}
-	if len(paths) != 0 {
-		t.Fatalf("List() = %v, want no symlink entries", paths)
-	}
-}
-
-func TestStoreListIgnoresGitAndReturnsAllBlobPaths(t *testing.T) {
-	ctx := context.Background()
+func TestStoreRejectsZeroIDAndIgnoresUnmanagedFiles(t *testing.T) {
 	root := t.TempDir()
 	store := New(root)
-
-	if err := store.Put(ctx, ports.Blob{Path: "b.adoc", Content: []byte("b")}); err != nil {
-		t.Fatalf("Put(b) error = %v", err)
+	if err := store.Put(context.Background(), ports.Blob{}); !errors.Is(err, domain.ErrInvalidDocumentID) {
+		t.Fatalf("Put() error = %v", err)
 	}
-	if err := store.Put(ctx, ports.Blob{Path: "a.adoc", Content: []byte("a")}); err != nil {
-		t.Fatalf("Put(a) error = %v", err)
+	if err := os.WriteFile(filepath.Join(root, "not-a-document.txt"), nil, 0o600); err != nil {
+		t.Fatal(err)
 	}
-	if err := store.Put(ctx, ports.Blob{Path: "ignored.txt", Content: []byte("ignored")}); err != nil {
-		t.Fatalf("Put(ignored) error = %v", err)
-	}
-	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
-		t.Fatalf("os.Mkdir() error = %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(root, ".git", "config.adoc"), []byte("ignored"), 0o644); err != nil {
-		t.Fatalf("os.WriteFile(.git) error = %v", err)
-	}
-
-	paths, err := store.List(ctx, ports.BlobFilter{})
-	if err != nil {
-		t.Fatalf("List() error = %v", err)
-	}
-	if want := []string{"a.adoc", "b.adoc", "ignored.txt"}; !reflect.DeepEqual(paths, want) {
-		t.Fatalf("List() = %v, want %v", paths, want)
-	}
-}
-
-func TestStoreListFiltersByPrefixAndSuffix(t *testing.T) {
-	ctx := context.Background()
-	store := New(t.TempDir())
-
-	for _, blob := range []ports.Blob{
-		{Path: "notes/a.adoc", Content: []byte("a")},
-		{Path: "notes/b.txt", Content: []byte("b")},
-		{Path: "archive/c.adoc", Content: []byte("c")},
-	} {
-		if err := store.Put(ctx, blob); err != nil {
-			t.Fatalf("Put(%s) error = %v", blob.Path, err)
-		}
-	}
-
-	paths, err := store.List(ctx, ports.BlobFilter{Prefix: "notes/", Suffix: ".adoc"})
-	if err != nil {
-		t.Fatalf("List() error = %v", err)
-	}
-	if want := []string{"notes/a.adoc"}; !reflect.DeepEqual(paths, want) {
-		t.Fatalf("List() = %v, want %v", paths, want)
+	ids, err := store.List(context.Background())
+	if err != nil || len(ids) != 0 {
+		t.Fatalf("List() = (%v, %v)", ids, err)
 	}
 }

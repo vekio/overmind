@@ -61,45 +61,50 @@ func (handler *UpdateDocumentHandler) Handle(
 		return UpdateDocumentResult{}, ErrRevisionRequired
 	}
 
-	currentBlob, err := handler.blobReader.Get(ctx, command.Path)
+	currentBlob, err := handler.blobReader.Get(ctx, command.ID)
 	if err != nil {
-		return UpdateDocumentResult{}, fmt.Errorf("update document %q: read current content: %w", command.Path, err)
+		return UpdateDocumentResult{}, fmt.Errorf("update document %q: read current content: %w", command.ID, err)
 	}
 	if currentBlob.Revision != command.ExpectedRevision {
-		return UpdateDocumentResult{}, fmt.Errorf("update document %q: %w", command.Path, ports.ErrBlobChanged)
+		return UpdateDocumentResult{}, fmt.Errorf("update document %q: %w", command.ID, ports.ErrBlobChanged)
 	}
 
 	currentDocument, err := parseManagedDocument(currentBlob.Content)
 	if err != nil {
-		return UpdateDocumentResult{}, fmt.Errorf("update document %q: current content: %w", command.Path, err)
+		return UpdateDocumentResult{}, fmt.Errorf("update document %q: current content: %w", command.ID, err)
+	}
+	if currentDocument.ID != currentBlob.ID {
+		return UpdateDocumentResult{}, fmt.Errorf(
+			"update document %q: stored document contains ID %q", command.ID, currentDocument.ID,
+		)
 	}
 	if bytes.Equal(currentBlob.Content, command.Content) {
-		return UpdateDocumentResult{Path: currentBlob.Path, Revision: currentBlob.Revision}, nil
+		return UpdateDocumentResult{ID: currentBlob.ID, Revision: currentBlob.Revision}, nil
 	}
 	updatedSource, err := sourceWithUpdatedAt(command.Content, handler.clock.Now())
 	if err != nil {
-		return UpdateDocumentResult{}, fmt.Errorf("update document %q: set update time: %w", command.Path, err)
+		return UpdateDocumentResult{}, fmt.Errorf("update document %q: set update time: %w", command.ID, err)
 	}
-	updatedBlob := ports.Blob{Path: currentBlob.Path, Content: updatedSource}
+	updatedBlob := ports.Blob{ID: currentBlob.ID, Content: updatedSource}
 	updatedDocument, err := parseManagedDocument(updatedBlob.Content)
 	if err != nil {
-		return UpdateDocumentResult{}, fmt.Errorf("update document %q: edited content: %w", command.Path, err)
+		return UpdateDocumentResult{}, fmt.Errorf("update document %q: edited content: %w", command.ID, err)
 	}
 	if currentDocument.ID != updatedDocument.ID ||
 		currentDocument.Kind != updatedDocument.Kind ||
 		!currentDocument.CreatedAt.Equal(updatedDocument.CreatedAt) {
-		return UpdateDocumentResult{}, fmt.Errorf("update document %q: %w", command.Path, ErrImmutableMetadata)
+		return UpdateDocumentResult{}, fmt.Errorf("update document %q: %w", command.ID, ErrImmutableMetadata)
 	}
 
 	newRevision, err := handler.blobUpdater.Update(ctx, updatedBlob, command.ExpectedRevision)
 	if err != nil {
-		return UpdateDocumentResult{}, fmt.Errorf("update document %q: store edited content: %w", command.Path, err)
+		return UpdateDocumentResult{}, fmt.Errorf("update document %q: store edited content: %w", command.ID, err)
 	}
-	indexEntry := documentindex.FromParsed(updatedBlob.Path, updatedDocument)
+	indexEntry := documentindex.FromParsed(updatedDocument)
 	if err := handler.documentIndex.Upsert(ctx, indexEntry); err != nil {
 		return UpdateDocumentResult{}, handler.rollbackBlob(ctx, currentBlob, newRevision, err)
 	}
-	return UpdateDocumentResult{Path: updatedBlob.Path, Revision: newRevision}, nil
+	return UpdateDocumentResult{ID: updatedBlob.ID, Revision: newRevision}, nil
 }
 
 func sourceWithUpdatedAt(source []byte, updatedAt time.Time) ([]byte, error) {
@@ -137,11 +142,11 @@ func (handler *UpdateDocumentHandler) rollbackBlob(
 	indexErr error,
 ) error {
 	_, rollbackErr := handler.blobUpdater.Update(ctx, ports.Blob{
-		Path:    current.Path,
+		ID:      current.ID,
 		Content: current.Content,
 	}, updatedRevision)
 	if rollbackErr != nil {
 		indexErr = errors.Join(indexErr, fmt.Errorf("restore previous content: %w", rollbackErr))
 	}
-	return fmt.Errorf("update document %q: index edited content: %w", current.Path, indexErr)
+	return fmt.Errorf("update document %q: index edited content: %w", current.ID, indexErr)
 }

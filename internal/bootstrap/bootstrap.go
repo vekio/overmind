@@ -2,8 +2,6 @@
 package bootstrap
 
 import (
-	"io"
-
 	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/app/createpage"
 	"git.casta.me/alberto/overmind/internal/app/getdocument"
@@ -11,92 +9,35 @@ import (
 	"git.casta.me/alberto/overmind/internal/app/rebuildindex"
 	"git.casta.me/alberto/overmind/internal/app/updatedocument"
 	"git.casta.me/alberto/overmind/internal/config"
-	"git.casta.me/alberto/overmind/internal/ports"
 )
 
-// Runtime is the configured local application runtime.
-type Runtime struct {
-	app    *app.Application
-	closer io.Closer
-}
-
-// Application returns the use cases exposed by the configured runtime.
-func (runtime *Runtime) Application() *app.Application {
-	return runtime.app
-}
-
-// Close releases resources owned by the runtime.
-func (runtime *Runtime) Close() error {
-	if runtime.closer == nil {
-		return nil
-	}
-	return runtime.closer.Close()
-}
-
-type localDeps struct {
-	Blobs    ports.BlobStore
-	Renderer ports.Renderer
-	IDs      ports.IDGenerator
-	Clock    ports.Clock
-	Index    ports.DocumentIndex
-	Closer   io.Closer
-}
-
-// New builds the local application and all of its dependencies.
-func New(cfg config.Config) (*Runtime, error) {
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-	deps, err := newLocalDeps(cfg)
+// New composes the application and the resources it owns.
+func New(cfg config.Config) (Application, error) {
+	deps, err := newDeps(cfg)
 	if err != nil {
-		return nil, err
+		return Application{}, err
 	}
 
-	return &Runtime{
-		app:    newLocalApplication(deps),
-		closer: deps.Closer,
+	return Application{
+		Application: newApplication(deps),
+		close:       deps.index.Close,
 	}, nil
 }
 
-func newLocalDeps(cfg config.Config) (localDeps, error) {
-	blobs, err := newBlobStore(cfg.Vault)
-	if err != nil {
-		return localDeps{}, err
-	}
-
-	renderer, err := newRenderer()
-	if err != nil {
-		return localDeps{}, err
-	}
-	index, err := newDocumentIndex(cfg.Index)
-	if err != nil {
-		return localDeps{}, err
-	}
-
-	return localDeps{
-		Blobs:    blobs,
-		Renderer: renderer,
-		IDs:      newIDGenerator(),
-		Clock:    newClock(),
-		Index:    index,
-		Closer:   index,
-	}, nil
-}
-
-func newLocalApplication(deps localDeps) *app.Application {
-	return &app.Application{
+func newApplication(deps deps) app.Application {
+	return app.Application{
 		Commands: app.Commands{
 			CreatePage: createpage.NewCreatePageHandler(
-				deps.Blobs, deps.Renderer, deps.IDs, deps.Clock, deps.Index,
+				deps.blobs, deps.renderer, deps.ids, deps.clock, deps.index,
 			),
-			RebuildIndex: rebuildindex.NewRebuildIndexHandler(deps.Blobs, deps.Index),
+			RebuildIndex: rebuildindex.NewRebuildIndexHandler(deps.blobs, deps.index),
 			UpdateDocument: updatedocument.NewUpdateDocumentHandler(
-				deps.Blobs, deps.Blobs, deps.Clock, deps.Index,
+				deps.blobs, deps.blobs, deps.clock, deps.index,
 			),
 		},
 		Queries: app.Queries{
-			GetDocument:   getdocument.NewGetDocumentHandler(deps.Blobs),
-			ListDocuments: listdocuments.NewListDocumentsHandler(deps.Index),
+			GetDocument:   getdocument.NewGetDocumentHandler(deps.blobs),
+			ListDocuments: listdocuments.NewListDocumentsHandler(deps.index),
 		},
 	}
 }

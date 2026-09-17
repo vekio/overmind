@@ -14,6 +14,7 @@ const (
 	headerPrefix    = "overmind-"
 	headerID        = headerPrefix + "id"
 	headerKind      = headerPrefix + "type"
+	headerArea      = headerPrefix + "area"
 	headerTags      = headerPrefix + "tags"
 	headerCreatedAt = headerPrefix + "created-at"
 	headerUpdatedAt = headerPrefix + "updated-at"
@@ -25,6 +26,7 @@ type ParsedDocument struct {
 	ID         domain.DocumentID
 	Kind       domain.DocumentKind
 	Title      domain.Title
+	Area       domain.Area
 	Tags       domain.Tags
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
@@ -64,6 +66,10 @@ func Parse(source []byte) (ParsedDocument, bool, error) {
 	if err != nil {
 		return ParsedDocument{}, true, fmt.Errorf("invalid %s: %w", headerTags, err)
 	}
+	area, err := areaFromHeader(headers[headerArea])
+	if err != nil {
+		return ParsedDocument{}, true, fmt.Errorf("invalid %s: %w", headerArea, err)
+	}
 	createdAt, err := time.Parse(time.RFC3339, headers[headerCreatedAt])
 	if err != nil {
 		return ParsedDocument{}, true, fmt.Errorf("invalid %s: %w", headerCreatedAt, err)
@@ -77,6 +83,7 @@ func Parse(source []byte) (ParsedDocument, bool, error) {
 		ID:         documentID,
 		Kind:       kind,
 		Title:      title,
+		Area:       area,
 		Tags:       tags,
 		CreatedAt:  createdAt,
 		UpdatedAt:  updatedAt,
@@ -98,13 +105,20 @@ func documentAttributes(headers map[string]string) map[string]string {
 	attributes := make(map[string]string)
 	for name, value := range headers {
 		switch name {
-		case headerID, headerKind, headerTags, headerCreatedAt, headerUpdatedAt:
+		case headerID, headerKind, headerArea, headerTags, headerCreatedAt, headerUpdatedAt:
 			continue
 		default:
 			attributes[strings.TrimPrefix(name, headerPrefix)] = value
 		}
 	}
 	return attributes
+}
+
+func areaFromHeader(value string) (domain.Area, error) {
+	if strings.TrimSpace(value) == "" {
+		return domain.Area{}, nil
+	}
+	return domain.NewArea(value)
 }
 
 func tagsFromHeader(value string) (domain.Tags, error) {

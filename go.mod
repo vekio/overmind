@@ -8,6 +8,7 @@ require (
 	github.com/urfave/cli/v3 v3.11.0
 	github.com/vekio/config v0.5.0
 	github.com/vekio/config/urfave v0.3.0
+	github.com/vekio/x v0.0.1
 	golang.org/x/text v0.41.0
 	modernc.org/sqlite v1.53.0
 )
@@ -19,7 +20,6 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
-	github.com/vekio/x v0.0.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	golang.org/x/sync v0.22.0 // indirect

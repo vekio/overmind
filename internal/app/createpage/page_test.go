@@ -105,22 +105,7 @@ func TestOptionalArea(t *testing.T) {
 	}
 }
 
-func TestPageDocumentKey(t *testing.T) {
-	id, _ := domain.NewDocumentID("page-id")
-	title, _ := domain.NewTitle("My Page")
-	area, _ := domain.NewArea("Knowledge/Go")
-
-	rootPage := domain.NewPage(id, title, domain.Tags{}, domain.Area{}, testCreatedAt)
-	nestedPage := domain.NewPage(id, title, domain.Tags{}, area, testCreatedAt)
-	if got, want := pageDocumentKey(rootPage), "page/my-page.adoc"; got != want {
-		t.Fatalf("root page key = %q, want %q", got, want)
-	}
-	if got, want := pageDocumentKey(nestedPage), "page/knowledge/go/my-page.adoc"; got != want {
-		t.Fatalf("nested page key = %q, want %q", got, want)
-	}
-}
-
-func TestIndexEntryForPageSeparatesCommonAndSpecificMetadata(t *testing.T) {
+func TestIndexEntryForPageContainsSearchableMetadata(t *testing.T) {
 	id, _ := domain.NewDocumentID("page-id")
 	title, _ := domain.NewTitle("My Page")
 	area, _ := domain.NewArea("Knowledge")
@@ -128,13 +113,10 @@ func TestIndexEntryForPageSeparatesCommonAndSpecificMetadata(t *testing.T) {
 	tags, _ := domain.NewTags(goTag)
 	page := domain.NewPage(id, title, tags, area, testCreatedAt)
 
-	entry := indexEntryForPage(page, "page/knowledge/my-page.adoc")
-	if entry.ID != id || entry.Path != "page/knowledge/my-page.adoc" || entry.Kind != domain.DocumentKindPage ||
+	entry := indexEntryForPage(page)
+	if entry.ID != id || entry.Kind != domain.DocumentKindPage || entry.Area != "knowledge" ||
 		entry.Title != "My Page" || !entry.CreatedAt.Equal(testCreatedAt) || !entry.UpdatedAt.Equal(testCreatedAt) ||
 		len(entry.Tags) != 1 || entry.Tags[0] != "go" {
 		t.Fatalf("entry = %+v", entry)
-	}
-	if len(entry.Attributes) != 1 || entry.Attributes["area"] != "knowledge" {
-		t.Fatalf("attributes = %+v", entry.Attributes)
 	}
 }

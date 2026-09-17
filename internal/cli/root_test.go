@@ -6,9 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/config"
 )
 
 func TestAsciiDocCommandDoesNotLoadApplicationConfiguration(t *testing.T) {
@@ -17,17 +14,17 @@ func TestAsciiDocCommandDoesNotLoadApplicationConfiguration(t *testing.T) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 
-	built := false
-	command := newTestCommand(t, func(config.Config) (Runtime, error) {
-		built = true
-		return runtimeStub{application: &app.Application{}}, nil
-	})
+	configHome := filepath.Join(t.TempDir(), "config")
+	dataHome := filepath.Join(t.TempDir(), "data")
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("XDG_DATA_HOME", dataHome)
+	command := newTestCommand(t)
 	command.Writer = &bytes.Buffer{}
 	if err := command.Run(context.Background(), []string{"overmind", "asciidoc", "lexer", path}); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if built {
-		t.Fatal("application was built for standalone asciidoc command")
+	if _, err := os.Stat(filepath.Join(configHome, "overmind", "config.yml")); !os.IsNotExist(err) {
+		t.Fatalf("configuration was created for asciidoc command: %v", err)
 	}
 }
 
@@ -37,11 +34,7 @@ func TestConfigInitDoesNotBuildApplication(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 	t.Setenv("XDG_DATA_HOME", dataHome)
 
-	built := false
-	command := newTestCommand(t, func(config.Config) (Runtime, error) {
-		built = true
-		return runtimeStub{application: &app.Application{}}, nil
-	})
+	command := newTestCommand(t)
 	var output bytes.Buffer
 	command.Writer = &output
 
@@ -52,10 +45,10 @@ func TestConfigInitDoesNotBuildApplication(t *testing.T) {
 	if output.String() != wantPath+"\n" {
 		t.Fatalf("output = %q, want %q", output.String(), wantPath+"\n")
 	}
-	if built {
-		t.Fatal("application was built for config command")
-	}
 	if _, err := os.Stat(wantPath); err != nil {
 		t.Fatalf("Stat() error = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dataHome, "overmind")); !os.IsNotExist(err) {
+		t.Fatalf("data directory was created for config command: %v", err)
 	}
 }

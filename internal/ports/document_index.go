@@ -14,9 +14,9 @@ var ErrIndexedDocumentNotFound = errors.New("indexed document not found")
 // AsciiDoc document.
 type IndexedDocument struct {
 	ID         domain.DocumentID
-	Path       string
 	Kind       domain.DocumentKind
 	Title      string
+	Area       string
 	Tags       []string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
@@ -37,18 +37,20 @@ type DocumentIndexReader interface {
 // ListIndexedDocumentsFilter restricts documents returned from the read
 // model. Every requested tag must be present.
 type ListIndexedDocumentsFilter struct {
-	Kind       domain.DocumentKind
-	Tags       domain.Tags
-	PathPrefix string
+	Kind  domain.DocumentKind
+	Title string
+	Area  domain.Area
+	Tags  domain.Tags
 }
 
 // IndexedDocumentSummary is the lightweight representation returned by
 // document listings.
 type IndexedDocumentSummary struct {
-	ID   domain.DocumentID
-	Path string
-	Kind domain.DocumentKind
-	Tags []string
+	ID    domain.DocumentID
+	Kind  domain.DocumentKind
+	Title string
+	Area  string
+	Tags  []string
 }
 
 // DocumentIndexLister lists documents from the read model.

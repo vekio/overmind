@@ -2,7 +2,6 @@ package createpage
 
 import (
 	"fmt"
-	"path"
 	"strings"
 
 	"git.casta.me/alberto/overmind/internal/domain"
@@ -55,25 +54,14 @@ func optionalArea(value string) (domain.Area, error) {
 	return domain.NewArea(value)
 }
 
-// pageDocumentKey returns the store-relative logical key. Storage adapters are
-// responsible for translating it to their concrete path or object key.
-func pageDocumentKey(page domain.Page) string {
-	return path.Join(page.Kind().String(), page.Area().String(), page.Title().Slug()+".adoc")
-}
-
-// indexEntryForPage maps common metadata to columns and keeps only
-// page-specific values in Attributes.
-func indexEntryForPage(page domain.Page, documentKey string) ports.IndexedDocument {
+func indexEntryForPage(page domain.Page) ports.IndexedDocument {
 	return ports.IndexedDocument{
 		ID:        page.ID(),
-		Path:      documentKey,
 		Kind:      page.Kind(),
 		Title:     page.Title().String(),
+		Area:      page.Area().String(),
 		Tags:      page.Tags().Strings(),
 		CreatedAt: page.CreatedAt(),
 		UpdatedAt: page.UpdatedAt(),
-		Attributes: map[string]string{
-			"area": page.Area().String(),
-		},
 	}
 }

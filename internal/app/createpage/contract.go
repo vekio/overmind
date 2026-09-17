@@ -11,6 +11,5 @@ type CreatePageCommand struct {
 
 // CreatePageResult is the minimal output of creating a page.
 type CreatePageResult struct {
-	ID   domain.DocumentID
-	Path string
+	ID domain.DocumentID
 }

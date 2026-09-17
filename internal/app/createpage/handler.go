@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
 
@@ -58,30 +59,28 @@ func (handler *CreatePageHandler) Handle(ctx context.Context, command CreatePage
 	if err != nil {
 		return CreatePageResult{}, fmt.Errorf("create page: %w", err)
 	}
-	documentKey := pageDocumentKey(page)
-
 	renderedPage, err := handler.renderer.Render(ctx, page.Kind().String(), page)
 	if err != nil {
-		return CreatePageResult{}, fmt.Errorf("render page %q: %w", documentKey, err)
+		return CreatePageResult{}, fmt.Errorf("render page %q: %w", page.ID(), err)
 	}
-	if err := handler.blobWriter.Create(ctx, ports.Blob{Path: documentKey, Content: renderedPage}); err != nil {
-		return CreatePageResult{}, fmt.Errorf("store page %q: %w", documentKey, err)
+	if err := handler.blobWriter.Create(ctx, ports.Blob{ID: page.ID(), Content: renderedPage}); err != nil {
+		return CreatePageResult{}, fmt.Errorf("store page %q: %w", page.ID(), err)
 	}
-	if err := handler.documentIndex.Upsert(ctx, indexEntryForPage(page, documentKey)); err != nil {
-		return CreatePageResult{}, handler.rollbackStoredPage(ctx, documentKey, err)
+	if err := handler.documentIndex.Upsert(ctx, indexEntryForPage(page)); err != nil {
+		return CreatePageResult{}, handler.rollbackStoredPage(ctx, page.ID(), err)
 	}
 
-	return CreatePageResult{ID: page.ID(), Path: documentKey}, nil
+	return CreatePageResult{ID: page.ID()}, nil
 }
 
 // rollbackStoredPage attempts to remove the blob after an index failure and
 // preserves both errors when the compensation also fails.
-func (handler *CreatePageHandler) rollbackStoredPage(ctx context.Context, documentKey string, indexErr error) error {
-	if cleanupErr := handler.blobWriter.Delete(ctx, documentKey); cleanupErr != nil {
-		return fmt.Errorf("index page %q: %w", documentKey, errors.Join(
+func (handler *CreatePageHandler) rollbackStoredPage(ctx context.Context, id domain.DocumentID, indexErr error) error {
+	if cleanupErr := handler.blobWriter.Delete(ctx, id); cleanupErr != nil {
+		return fmt.Errorf("index page %q: %w", id, errors.Join(
 			indexErr,
 			fmt.Errorf("remove created page: %w", cleanupErr),
 		))
 	}
-	return fmt.Errorf("index page %q: %w", documentKey, indexErr)
+	return fmt.Errorf("index page %q: %w", id, indexErr)
 }

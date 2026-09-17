@@ -18,7 +18,7 @@ func TestParseExtractsManagedMetadata(t *testing.T) {
 	if !managed || document.ID.String() != "page-id" || document.Kind != domain.DocumentKindPage ||
 		document.Title.String() != "Page" || document.Tags.Len() != 2 ||
 		document.Tags.Strings()[0] != "go" || document.Tags.Strings()[1] != "diseno-de-dominio" ||
-		!document.CreatedAt.Equal(wantCreatedAt) || document.Attributes["area"] != "knowledge" {
+		!document.CreatedAt.Equal(wantCreatedAt) || document.Area.String() != "knowledge" {
 		t.Fatalf("managed = %t, document = %+v", managed, document)
 	}
 	if !document.UpdatedAt.Equal(wantCreatedAt) {

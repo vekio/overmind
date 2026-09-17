@@ -4,37 +4,27 @@ import (
 	"bytes"
 	"context"
 	"testing"
-
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/app/rebuildindex"
-	"git.casta.me/alberto/overmind/internal/config"
 )
 
-type rebuildIndexHandlerStub struct {
-	called bool
-	result rebuildindex.RebuildIndexResult
-}
-
-func (handler *rebuildIndexHandlerStub) Handle(context.Context, rebuildindex.RebuildIndexCommand) (rebuildindex.RebuildIndexResult, error) {
-	handler.called = true
-	return handler.result, nil
-}
-
 func TestIndexRebuildExecutesLocalUseCase(t *testing.T) {
-	configPath := writeLocalConfig(t)
-	handler := &rebuildIndexHandlerStub{result: rebuildindex.RebuildIndexResult{Documents: 2}}
-	command := newTestCommand(t, func(config.Config) (Runtime, error) {
-		return runtimeStub{application: &app.Application{
-			Commands: app.Commands{RebuildIndex: handler},
-		}}, nil
-	})
-	var output bytes.Buffer
-	command.Writer = &output
-
-	if err := command.Run(context.Background(), []string{"overmind", "--config", configPath, "index", "rebuild"}); err != nil {
-		t.Fatalf("Run() error = %v", err)
+	configPath, _ := writeLocalConfig(t)
+	create := newTestCommand(t)
+	create.Writer = &bytes.Buffer{}
+	if err := create.Run(context.Background(), []string{
+		"overmind", "--config", configPath, "page", "First page",
+	}); err != nil {
+		t.Fatalf("create page: %v", err)
 	}
-	if !handler.called || output.String() != "Indexed 2 documents\n" {
-		t.Fatalf("called = %t, output = %q", handler.called, output.String())
+
+	rebuild := newTestCommand(t)
+	var output bytes.Buffer
+	rebuild.Writer = &output
+	if err := rebuild.Run(context.Background(), []string{
+		"overmind", "--config", configPath, "index", "rebuild",
+	}); err != nil {
+		t.Fatalf("rebuild index: %v", err)
+	}
+	if output.String() != "Indexed 1 documents\n" {
+		t.Fatalf("output = %q", output.String())
 	}
 }

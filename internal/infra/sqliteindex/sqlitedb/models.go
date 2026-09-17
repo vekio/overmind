@@ -6,9 +6,9 @@ package sqlitedb
 
 type Document struct {
 	ID        string `db:"id"`
-	Path      string `db:"path"`
 	Kind      string `db:"kind"`
 	Title     string `db:"title"`
+	Area      string `db:"area"`
 	CreatedAt string `db:"created_at"`
 	UpdatedAt string `db:"updated_at"`
 }

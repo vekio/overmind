@@ -31,13 +31,9 @@ func TestConfigurationDefaultsUseApplicationData(t *testing.T) {
 		t.Fatalf("NewFile() error = %v", err)
 	}
 
-	wantVault := filepath.Join(dataHome, "overmind", "vault")
-	wantIndex := filepath.Join(dataHome, "overmind", "index.db")
-	if defaults.Vault.RootPath != wantVault {
-		t.Fatalf("vault path = %q, want %q", defaults.Vault.RootPath, wantVault)
-	}
-	if defaults.Index.Path != wantIndex {
-		t.Fatalf("index path = %q, want %q", defaults.Index.Path, wantIndex)
+	wantDataDir := filepath.Join(dataHome, "overmind")
+	if defaults.DataDir != wantDataDir {
+		t.Fatalf("data directory = %q, want %q", defaults.DataDir, wantDataDir)
 	}
 }
 
@@ -73,12 +69,7 @@ func TestConfigurationFileRejectsUnknownFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeConfigContent(t, file.Path(), `vault:
-  driver: local
-  localRoot: ./vault
-index:
-  driver: sqlite
-  path: ./index.db
+	writeConfigContent(t, file.Path(), `dataDir: ./data
 unexpected: true
 `)
 	if _, err := file.Load(); err == nil || !strings.Contains(err.Error(), "unexpected") {

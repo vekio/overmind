@@ -20,14 +20,14 @@ func NewGetDocumentHandler(blobs ports.BlobReader) *GetDocumentHandler {
 	return &GetDocumentHandler{blobs: blobs}
 }
 
-// Handle retrieves the raw document at the requested logical path.
+// Handle retrieves the raw document with the requested ID.
 func (handler *GetDocumentHandler) Handle(ctx context.Context, query GetDocumentQuery) (GetDocumentResult, error) {
-	blob, err := handler.blobs.Get(ctx, query.Path)
+	blob, err := handler.blobs.Get(ctx, query.ID)
 	if err != nil {
-		return GetDocumentResult{}, fmt.Errorf("get document %q: %w", query.Path, err)
+		return GetDocumentResult{}, fmt.Errorf("get document %q: %w", query.ID, err)
 	}
 	return GetDocumentResult{
-		Path:     blob.Path,
+		ID:       blob.ID,
 		Content:  append([]byte(nil), blob.Content...),
 		Revision: blob.Revision,
 	}, nil

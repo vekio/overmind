@@ -41,10 +41,11 @@ func (handler *ListDocumentsHandler) Handle(
 	documents := make([]DocumentSummary, len(indexedDocuments))
 	for index, document := range indexedDocuments {
 		documents[index] = DocumentSummary{
-			ID:   document.ID,
-			Path: document.Path,
-			Type: document.Kind,
-			Tags: append([]string(nil), document.Tags...),
+			ID:    document.ID,
+			Type:  document.Kind,
+			Title: document.Title,
+			Area:  document.Area,
+			Tags:  append([]string(nil), document.Tags...),
 		}
 	}
 	return ListDocumentsResult{Documents: documents}, nil
@@ -72,9 +73,15 @@ func listFilter(query ListDocumentsQuery) (ports.ListIndexedDocumentsFilter, err
 		return ports.ListIndexedDocumentsFilter{}, fmt.Errorf("validate tags: %w", err)
 	}
 
+	var area domain.Area
+	if strings.TrimSpace(query.Area) != "" {
+		area, err = domain.NewArea(query.Area)
+		if err != nil {
+			return ports.ListIndexedDocumentsFilter{}, fmt.Errorf("validate area: %w", err)
+		}
+	}
+
 	return ports.ListIndexedDocumentsFilter{
-		Kind:       kind,
-		Tags:       normalizedTags,
-		PathPrefix: strings.TrimSpace(query.PathPrefix),
+		Kind: kind, Title: strings.TrimSpace(query.Title), Area: area, Tags: normalizedTags,
 	}, nil
 }

@@ -25,7 +25,7 @@ func TestHandlerCreatesPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
-	if result.ID.String() != "page-id" || result.Path != "page/knowledge/go/first-page.adoc" {
+	if result.ID.String() != "page-id" {
 		t.Fatalf("Handle() result = %+v", result)
 	}
 	if renderer.calls != 1 || renderer.name != "page" {
@@ -35,10 +35,10 @@ func TestHandlerCreatesPage(t *testing.T) {
 	if !ok || page.Title().String() != "First page" || page.Area().String() != "knowledge/go" || page.Tags().Len() != 2 {
 		t.Fatalf("Render() data = %#v", renderer.data)
 	}
-	if blobs.createCalls != 1 || blobs.created.Path != result.Path || string(blobs.created.Content) != "rendered page" {
+	if blobs.createCalls != 1 || blobs.created.ID != result.ID || string(blobs.created.Content) != "rendered page" {
 		t.Fatalf("created blob = %+v, calls = %d", blobs.created, blobs.createCalls)
 	}
-	if index.calls != 1 || index.document.Path != result.Path || index.document.ID != result.ID {
+	if index.calls != 1 || index.document.ID != result.ID || index.document.Area != "knowledge/go" {
 		t.Fatalf("indexed document = %+v, calls = %d", index.document, index.calls)
 	}
 }
@@ -49,7 +49,7 @@ func TestHandlerPreservesExistingBlobError(t *testing.T) {
 
 	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page", Area: "Knowledge"})
 	if !errors.Is(err, ports.ErrBlobAlreadyExists) ||
-		!strings.Contains(err.Error(), `store page "page/knowledge/page.adoc"`) {
+		!strings.Contains(err.Error(), `store page "page-id"`) {
 		t.Fatalf("Handle() error = %v", err)
 	}
 }
@@ -61,7 +61,7 @@ func TestHandlerStopsWhenRenderingFails(t *testing.T) {
 	handler := newTestHandler(blobs, &rendererStub{err: renderErr}, &idGeneratorStub{id: "page-id"}, index)
 
 	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"})
-	if !errors.Is(err, renderErr) || !strings.Contains(err.Error(), `render page "page/page.adoc"`) {
+	if !errors.Is(err, renderErr) || !strings.Contains(err.Error(), `render page "page-id"`) {
 		t.Fatalf("Handle() error = %v", err)
 	}
 	if blobs.createCalls != 0 || index.calls != 0 {
@@ -76,7 +76,7 @@ func TestHandlerStopsWhenStorageFails(t *testing.T) {
 	handler := newTestHandler(blobs, &rendererStub{}, &idGeneratorStub{id: "page-id"}, index)
 
 	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"})
-	if !errors.Is(err, storageErr) || !strings.Contains(err.Error(), `store page "page/page.adoc"`) {
+	if !errors.Is(err, storageErr) || !strings.Contains(err.Error(), `store page "page-id"`) {
 		t.Fatalf("Handle() error = %v", err)
 	}
 	if index.calls != 0 {
@@ -90,11 +90,11 @@ func TestHandlerRollsBackStoredPageWhenIndexingFails(t *testing.T) {
 	handler := newTestHandler(blobs, &rendererStub{}, &idGeneratorStub{id: "page-id"}, &indexWriterStub{err: indexErr})
 
 	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"})
-	if !errors.Is(err, indexErr) || !strings.Contains(err.Error(), `index page "page/page.adoc"`) {
+	if !errors.Is(err, indexErr) || !strings.Contains(err.Error(), `index page "page-id"`) {
 		t.Fatalf("Handle() error = %v", err)
 	}
-	if blobs.deleteCalls != 1 || blobs.deletedPath != "page/page.adoc" {
-		t.Fatalf("Delete() path = %q, calls = %d", blobs.deletedPath, blobs.deleteCalls)
+	if blobs.deleteCalls != 1 || blobs.deletedID.String() != "page-id" {
+		t.Fatalf("Delete() ID = %q, calls = %d", blobs.deletedID, blobs.deleteCalls)
 	}
 }
 
@@ -106,7 +106,7 @@ func TestHandlerPreservesIndexAndRollbackFailures(t *testing.T) {
 
 	_, err := handler.Handle(context.Background(), CreatePageCommand{Title: "Page"})
 	if !errors.Is(err, indexErr) || !errors.Is(err, cleanupErr) ||
-		!strings.Contains(err.Error(), `index page "page/page.adoc"`) ||
+		!strings.Contains(err.Error(), `index page "page-id"`) ||
 		!strings.Contains(err.Error(), "remove created page") {
 		t.Fatalf("Handle() error = %v", err)
 	}

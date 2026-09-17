@@ -39,7 +39,7 @@ func (q *Queries) DeleteDocumentTags(ctx context.Context, documentID string) err
 }
 
 const getDocumentByID = `-- name: GetDocumentByID :one
-SELECT id, path, kind, title, created_at, updated_at
+SELECT id, kind, title, area, created_at, updated_at
 FROM documents
 WHERE id = ?
 `
@@ -49,9 +49,9 @@ func (q *Queries) GetDocumentByID(ctx context.Context, id string) (Document, err
 	var i Document
 	err := row.Scan(
 		&i.ID,
-		&i.Path,
 		&i.Kind,
 		&i.Title,
+		&i.Area,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -156,14 +156,17 @@ func (q *Queries) ListDocumentTags(ctx context.Context, documentID string) ([]st
 }
 
 const listDocuments = `-- name: ListDocuments :many
-SELECT id, path, kind
+SELECT id, kind, title, area
 FROM documents AS document
 WHERE (CAST(?1 AS TEXT) = '' OR document.kind = CAST(?1 AS TEXT))
   AND (CAST(?2 AS TEXT) = ''
-       OR instr(document.path, CAST(?2 AS TEXT)) = 1)
+       OR instr(lower(document.title), lower(CAST(?2 AS TEXT))) > 0)
+  AND (CAST(?3 AS TEXT) = ''
+       OR document.area = CAST(?3 AS TEXT)
+       OR instr(document.area, CAST(?3 AS TEXT) || '/') = 1)
   AND NOT EXISTS (
       SELECT 1
-      FROM json_each(CAST(?3 AS TEXT)) AS requested_tag
+      FROM json_each(CAST(?4 AS TEXT)) AS requested_tag
       WHERE NOT EXISTS (
           SELECT 1
           FROM document_tags AS document_tag
@@ -171,23 +174,30 @@ WHERE (CAST(?1 AS TEXT) = '' OR document.kind = CAST(?1 AS TEXT))
             AND document_tag.tag = requested_tag.value
       )
   )
-ORDER BY document.path, document.id
+ORDER BY document.title COLLATE NOCASE, document.area, document.kind, document.id
 `
 
 type ListDocumentsParams struct {
-	Kind       string `db:"kind"`
-	PathPrefix string `db:"path_prefix"`
-	TagsJson   string `db:"tags_json"`
+	Kind     string `db:"kind"`
+	Title    string `db:"title"`
+	Area     string `db:"area"`
+	TagsJson string `db:"tags_json"`
 }
 
 type ListDocumentsRow struct {
-	ID   string `db:"id"`
-	Path string `db:"path"`
-	Kind string `db:"kind"`
+	ID    string `db:"id"`
+	Kind  string `db:"kind"`
+	Title string `db:"title"`
+	Area  string `db:"area"`
 }
 
 func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([]ListDocumentsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listDocuments, arg.Kind, arg.PathPrefix, arg.TagsJson)
+	rows, err := q.db.QueryContext(ctx, listDocuments,
+		arg.Kind,
+		arg.Title,
+		arg.Area,
+		arg.TagsJson,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +205,12 @@ func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([
 	var items []ListDocumentsRow
 	for rows.Next() {
 		var i ListDocumentsRow
-		if err := rows.Scan(&i.ID, &i.Path, &i.Kind); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Title,
+			&i.Area,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -210,21 +225,21 @@ func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([
 }
 
 const upsertDocument = `-- name: UpsertDocument :exec
-INSERT INTO documents (id, path, kind, title, created_at, updated_at)
+INSERT INTO documents (id, kind, title, area, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
-    path = excluded.path,
     kind = excluded.kind,
     title = excluded.title,
+    area = excluded.area,
     created_at = excluded.created_at,
     updated_at = excluded.updated_at
 `
 
 type UpsertDocumentParams struct {
 	ID        string `db:"id"`
-	Path      string `db:"path"`
 	Kind      string `db:"kind"`
 	Title     string `db:"title"`
+	Area      string `db:"area"`
 	CreatedAt string `db:"created_at"`
 	UpdatedAt string `db:"updated_at"`
 }
@@ -232,9 +247,9 @@ type UpsertDocumentParams struct {
 func (q *Queries) UpsertDocument(ctx context.Context, arg UpsertDocumentParams) error {
 	_, err := q.db.ExecContext(ctx, upsertDocument,
 		arg.ID,
-		arg.Path,
 		arg.Kind,
 		arg.Title,
+		arg.Area,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

@@ -28,23 +28,28 @@ func NewRebuildIndexHandler(blobs ports.BlobReader, index ports.DocumentIndexWri
 
 // Handle rebuilds the index atomically from every managed .adoc blob.
 func (handler *RebuildIndexHandler) Handle(ctx context.Context, _ RebuildIndexCommand) (RebuildIndexResult, error) {
-	paths, err := handler.blobs.List(ctx, ports.BlobFilter{Suffix: ".adoc"})
+	ids, err := handler.blobs.List(ctx)
 	if err != nil {
 		return RebuildIndexResult{}, fmt.Errorf("rebuild index: list documents: %w", err)
 	}
 
-	documents := make([]ports.IndexedDocument, 0, len(paths))
-	for _, path := range paths {
-		blob, err := handler.blobs.Get(ctx, path)
+	documents := make([]ports.IndexedDocument, 0, len(ids))
+	for _, id := range ids {
+		blob, err := handler.blobs.Get(ctx, id)
 		if err != nil {
-			return RebuildIndexResult{}, fmt.Errorf("rebuild index: read %q: %w", path, err)
+			return RebuildIndexResult{}, fmt.Errorf("rebuild index: read %q: %w", id, err)
 		}
 		parsedDocument, managed, err := documentparser.Parse(blob.Content)
 		if err != nil {
-			return RebuildIndexResult{}, fmt.Errorf("rebuild index: parse %q: %w", path, err)
+			return RebuildIndexResult{}, fmt.Errorf("rebuild index: parse %q: %w", id, err)
 		}
 		if managed {
-			documents = append(documents, documentindex.FromParsed(blob.Path, parsedDocument))
+			if parsedDocument.ID != id {
+				return RebuildIndexResult{}, fmt.Errorf(
+					"rebuild index: document %q contains ID %q", id, parsedDocument.ID,
+				)
+			}
+			documents = append(documents, documentindex.FromParsed(parsedDocument))
 		}
 	}
 

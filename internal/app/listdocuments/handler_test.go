@@ -29,24 +29,23 @@ func (index *indexListerStub) List(
 func TestHandlerNormalizesFiltersAndReturnsSummaries(t *testing.T) {
 	id, _ := domain.NewDocumentID("page-id")
 	index := &indexListerStub{documents: []ports.IndexedDocumentSummary{{
-		ID: id, Path: "page/go/page.adoc", Kind: domain.DocumentKindPage, Tags: []string{"go", "ddd"},
+		ID: id, Kind: domain.DocumentKindPage, Title: "Page", Area: "knowledge/go", Tags: []string{"go", "ddd"},
 	}}}
 	handler := NewListDocumentsHandler(index)
 
 	result, err := handler.Handle(context.Background(), ListDocumentsQuery{
-		Type:       " page ",
-		Tags:       []string{"Go", "Diseño de dominio"},
-		PathPrefix: " page/go/ ",
+		Type: " page ", Title: " Page ", Area: " Knowledge ",
+		Tags: []string{"Go", "Diseño de dominio"},
 	})
 	if err != nil {
 		t.Fatalf("Handle() error = %v", err)
 	}
-	if index.filter.Kind != domain.DocumentKindPage || index.filter.PathPrefix != "page/go/" ||
+	if index.filter.Kind != domain.DocumentKindPage || index.filter.Title != "Page" || index.filter.Area.String() != "knowledge" ||
 		!reflect.DeepEqual(index.filter.Tags.Strings(), []string{"go", "diseno-de-dominio"}) {
 		t.Fatalf("filter = %+v", index.filter)
 	}
 	if len(result.Documents) != 1 || result.Documents[0].ID != id ||
-		result.Documents[0].Path != "page/go/page.adoc" || result.Documents[0].Type != domain.DocumentKindPage ||
+		result.Documents[0].Title != "Page" || result.Documents[0].Area != "knowledge/go" || result.Documents[0].Type != domain.DocumentKindPage ||
 		!reflect.DeepEqual(result.Documents[0].Tags, []string{"go", "ddd"}) {
 		t.Fatalf("result = %+v", result)
 	}
@@ -60,6 +59,7 @@ func TestHandlerNormalizesFiltersAndReturnsSummaries(t *testing.T) {
 func TestHandlerRejectsInvalidFiltersBeforeListing(t *testing.T) {
 	for name, query := range map[string]ListDocumentsQuery{
 		"type":          {Type: "journal"},
+		"area":          {Area: "///"},
 		"tag":           {Tags: []string{"---"}},
 		"duplicate tag": {Tags: []string{"Go", "go"}},
 	} {

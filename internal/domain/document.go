@@ -23,6 +23,15 @@ func NewDocumentID(value string) (DocumentID, error) {
 	if strings.ContainsAny(value, "\r\n\t ") {
 		return DocumentID{}, fmt.Errorf("%w: value must not contain whitespace", ErrInvalidDocumentID)
 	}
+	for _, character := range value {
+		if character >= 'a' && character <= 'z' ||
+			character >= 'A' && character <= 'Z' ||
+			character >= '0' && character <= '9' ||
+			character == '-' || character == '_' {
+			continue
+		}
+		return DocumentID{}, fmt.Errorf("%w: value must contain only letters, numbers, hyphens, or underscores", ErrInvalidDocumentID)
+	}
 	return DocumentID{value: value}, nil
 }
 

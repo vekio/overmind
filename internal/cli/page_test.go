@@ -8,60 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/app/createpage"
-	"git.casta.me/alberto/overmind/internal/config"
-	"git.casta.me/alberto/overmind/internal/domain"
 )
 
-type createPageHandlerStub struct {
-	command createpage.CreatePageCommand
-	err     error
-}
-
-func (handler *createPageHandlerStub) Handle(_ context.Context, command createpage.CreatePageCommand) (createpage.CreatePageResult, error) {
-	handler.command = command
-	if handler.err != nil {
-		return createpage.CreatePageResult{}, handler.err
-	}
-	id, err := domain.NewDocumentID("page-id")
-	return createpage.CreatePageResult{ID: id, Path: "page/knowledge/go/first-page.adoc"}, err
-}
-
-func TestCreatePagePreservesUseCaseError(t *testing.T) {
-	useCaseErr := errors.New("store page: blob already exists")
-	handler := &createPageHandlerStub{err: useCaseErr}
-	state := newTestApplicationState(runtimeStub{application: &app.Application{
-		Commands: app.Commands{CreatePage: handler},
-	}})
-
-	err := newPageCommand(state).Run(context.Background(), []string{"page", "Page"})
-	if !errors.Is(err, useCaseErr) || !strings.Contains(err.Error(), "blob already exists") {
-		t.Fatalf("Run() error = %v", err)
-	}
-}
-
-func TestCreatePageLoadsConfigAndExecutesUseCase(t *testing.T) {
-	configPath := filepath.Join(t.TempDir(), "config.yml")
-	if err := os.WriteFile(configPath, []byte(`vault:
-  driver: local
-  localRoot: ./vault
-index:
-  driver: sqlite
-  path: ./index.db
-`), 0o600); err != nil {
-		t.Fatalf("WriteFile() error = %v", err)
-	}
-
-	handler := &createPageHandlerStub{}
-	var selectedConfig config.Config
-	command := newTestCommand(t, func(cfg config.Config) (Runtime, error) {
-		selectedConfig = cfg
-		return runtimeStub{application: &app.Application{
-			Commands: app.Commands{CreatePage: handler},
-		}}, nil
-	})
+func TestCreatePageLoadsConfigAndCreatesDocument(t *testing.T) {
+	configPath, dataDir := writeLocalConfig(t)
+	command := newTestCommand(t)
 	var output bytes.Buffer
 	command.Writer = &output
 
@@ -72,51 +23,51 @@ index:
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if selectedConfig.Vault.RootPath != "./vault" {
-		t.Fatalf("selected root = %q", selectedConfig.Vault.RootPath)
+
+	id := strings.TrimSpace(output.String())
+	content, err := os.ReadFile(filepath.Join(dataDir, "documents", id+".adoc"))
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
 	}
-	if handler.command.Title != "First page" || handler.command.Area != "Knowledge/Go" || len(handler.command.Tags) != 2 || handler.command.Tags[0] != "Go" || handler.command.Tags[1] != "DDD" {
-		t.Fatalf("use-case command = %+v", handler.command)
-	}
-	if output.String() != "page/knowledge/go/first-page.adoc\n" {
-		t.Fatalf("output = %q", output.String())
+	got := string(content)
+	for _, want := range []string{"= First page", ":overmind-area: knowledge/go", ":overmind-tags: go, ddd"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("document does not contain %q:\n%s", want, got)
+		}
 	}
 }
 
-func TestCreatePageCreatesAndLoadsDefaultConfig(t *testing.T) {
+func TestCreatePageLoadsConfigurationCreatedBySetup(t *testing.T) {
 	configHome := filepath.Join(t.TempDir(), "config")
 	dataHome := filepath.Join(t.TempDir(), "data")
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 	t.Setenv("XDG_DATA_HOME", dataHome)
 
-	handler := &createPageHandlerStub{}
-	var selectedConfig config.Config
-	command := newTestCommand(t, func(cfg config.Config) (Runtime, error) {
-		selectedConfig = cfg
-		return runtimeStub{application: &app.Application{
-			Commands: app.Commands{CreatePage: handler},
-		}}, nil
-	})
-	command.Writer = &bytes.Buffer{}
+	setup := newTestCommand(t)
+	setup.Writer = &bytes.Buffer{}
+	if err := setup.Run(context.Background(), []string{"overmind", "setup"}); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	command := newTestCommand(t)
+	var output bytes.Buffer
+	command.Writer = &output
 
 	if err := command.Run(context.Background(), []string{"overmind", "page", "First page"}); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if want := filepath.Join(dataHome, "overmind", "vault"); selectedConfig.Vault.RootPath != want {
-		t.Fatalf("Vault.RootPath = %q, want %q", selectedConfig.Vault.RootPath, want)
-	}
 	if _, err := os.Stat(filepath.Join(configHome, "overmind", "config.yml")); err != nil {
-		t.Fatalf("Stat() error = %v", err)
+		t.Fatalf("Stat(config) error = %v", err)
+	}
+	id := strings.TrimSpace(output.String())
+	if _, err := os.Stat(filepath.Join(dataHome, "overmind", "documents", id+".adoc")); err != nil {
+		t.Fatalf("Stat(document) error = %v", err)
 	}
 }
 
 func TestCreatePageDoesNotCreateExplicitMissingConfig(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "missing.yml")
-	built := false
-	command := newTestCommand(t, func(config.Config) (Runtime, error) {
-		built = true
-		return runtimeStub{application: &app.Application{}}, nil
-	})
+	command := newTestCommand(t)
 
 	err := command.Run(context.Background(), []string{
 		"overmind", "--config", configPath, "page", "First page",
@@ -124,23 +75,36 @@ func TestCreatePageDoesNotCreateExplicitMissingConfig(t *testing.T) {
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("Run() error = %v, want %v", err, os.ErrNotExist)
 	}
-	if built {
-		t.Fatal("application was built with missing explicit configuration")
-	}
 	if _, err := os.Stat(configPath); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("Stat() error = %v, want %v", err, os.ErrNotExist)
 	}
 }
 
+func TestCreatePageRequiresSetupWhenDefaultConfigurationIsMissing(t *testing.T) {
+	configHome := filepath.Join(t.TempDir(), "config")
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+
+	command := newTestCommand(t)
+	err := command.Run(context.Background(), []string{"overmind", "page", "First page"})
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Run() error = %v, want %v", err, os.ErrNotExist)
+	}
+	if _, err := os.Stat(filepath.Join(configHome, "overmind", "config.yml")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("configuration was created without setup: %v", err)
+	}
+}
+
 func TestCreatePageRequiresTitleArgument(t *testing.T) {
-	err := newPageCommand(&applicationState{}).Run(context.Background(), []string{"page"})
+	command := newTestCommand(t)
+	err := command.Run(context.Background(), []string{"overmind", "page"})
 	if err == nil {
 		t.Fatalf("Run() error = %v, want missing title error", err)
 	}
 }
 
 func TestCreatePageRejectsArgumentsAfterTitle(t *testing.T) {
-	err := newPageCommand(&applicationState{}).Run(context.Background(), []string{"page", "First", "page"})
+	command := newTestCommand(t)
+	err := command.Run(context.Background(), []string{"overmind", "page", "First", "page"})
 	if err == nil || !strings.Contains(err.Error(), "unexpected arguments") {
 		t.Fatalf("Run() error = %v, want unexpected arguments error", err)
 	}

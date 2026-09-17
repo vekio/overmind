@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/ports"
 )
 
@@ -45,7 +46,7 @@ type blobWriterStub struct {
 	created     ports.Blob
 	createCalls int
 	createErr   error
-	deletedPath string
+	deletedID   domain.DocumentID
 	deleteCalls int
 	deleteErr   error
 }
@@ -58,8 +59,8 @@ func (writer *blobWriterStub) Create(_ context.Context, blob ports.Blob) error {
 
 func (writer *blobWriterStub) Put(context.Context, ports.Blob) error { return nil }
 
-func (writer *blobWriterStub) Delete(_ context.Context, path string) error {
-	writer.deletedPath = path
+func (writer *blobWriterStub) Delete(_ context.Context, id domain.DocumentID) error {
+	writer.deletedID = id
 	writer.deleteCalls++
 	return writer.deleteErr
 }

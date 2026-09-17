@@ -126,9 +126,9 @@ func (store *Store) GetByID(ctx context.Context, id domain.DocumentID) (ports.In
 
 	result := ports.IndexedDocument{
 		ID:         id,
-		Path:       document.Path,
 		Kind:       kind,
 		Title:      document.Title,
+		Area:       document.Area,
 		Tags:       tags,
 		CreatedAt:  createdAt,
 		UpdatedAt:  updatedAt,
@@ -150,9 +150,10 @@ func (store *Store) List(
 		return nil, fmt.Errorf("encode indexed document tag filter: %w", err)
 	}
 	indexed, err := store.queries.ListDocuments(ctx, sqlitedb.ListDocumentsParams{
-		Kind:       filter.Kind.String(),
-		PathPrefix: filter.PathPrefix,
-		TagsJson:   string(tagsJSON),
+		Kind:     filter.Kind.String(),
+		Title:    filter.Title,
+		Area:     filter.Area.String(),
+		TagsJson: string(tagsJSON),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list indexed documents: %w", err)
@@ -173,10 +174,7 @@ func (store *Store) List(
 			return nil, fmt.Errorf("list indexed document tags: %w", err)
 		}
 		documents[index] = ports.IndexedDocumentSummary{
-			ID:   id,
-			Path: document.Path,
-			Kind: kind,
-			Tags: tags,
+			ID: id, Kind: kind, Title: document.Title, Area: document.Area, Tags: tags,
 		}
 	}
 	return documents, nil
@@ -225,9 +223,9 @@ func (store *Store) ReplaceAll(ctx context.Context, documents []ports.IndexedDoc
 func upsert(ctx context.Context, queries *sqlitedb.Queries, document ports.IndexedDocument) error {
 	if err := queries.UpsertDocument(ctx, sqlitedb.UpsertDocumentParams{
 		ID:        document.ID.String(),
-		Path:      document.Path,
 		Kind:      document.Kind.String(),
 		Title:     document.Title,
+		Area:      document.Area,
 		CreatedAt: document.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt: document.UpdatedAt.UTC().Format(time.RFC3339),
 	}); err != nil {
