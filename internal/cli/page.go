@@ -13,7 +13,7 @@ import (
 func newPageCommand(documentRenderer *renderer.Renderer) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "page",
-		Usage:     "create an AsciiDoc page",
+		Usage:     "create a page note",
 		ArgsUsage: "TITLE",
 		Arguments: []urfavecli.Argument{
 			&urfavecli.StringArgs{
