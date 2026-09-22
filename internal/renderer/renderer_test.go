@@ -109,6 +109,31 @@ func TestRenderJournalRejectsInvalidDate(t *testing.T) {
 	}
 }
 
+func TestRenderInbox(t *testing.T) {
+	documentRenderer := newRenderer(t)
+	createdAt := time.Date(2026, time.September, 22, 21, 30, 45, 0, time.FixedZone("CEST", 2*60*60))
+
+	content, err := documentRenderer.Render(context.Background(), renderer.InboxTemplate, renderer.Inbox{
+		ID:        "3393772e-7405-465f-a7f8-e231d9079996",
+		Content:   "Revisar cómo organizar las copias de seguridad.",
+		CreatedAt: createdAt,
+		UpdatedAt: createdAt,
+	})
+	if err != nil {
+		t.Fatalf("Render() error = %v", err)
+	}
+
+	want := "= Capture 2026-09-22 21:30:45\n" +
+		":overmind-id: 3393772e-7405-465f-a7f8-e231d9079996\n" +
+		":overmind-type: inbox\n" +
+		":overmind-created-at: 2026-09-22T19:30:45Z\n" +
+		":overmind-updated-at: 2026-09-22T19:30:45Z\n\n" +
+		"Revisar cómo organizar las copias de seguridad.\n"
+	if got := string(content); got != want {
+		t.Fatalf("Render() = %q, want %q", got, want)
+	}
+}
+
 func TestRenderReturnsCanceledContext(t *testing.T) {
 	documentRenderer := newRenderer(t)
 	ctx, cancel := context.WithCancel(context.Background())

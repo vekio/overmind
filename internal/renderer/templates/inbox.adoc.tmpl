@@ -1,0 +1,9 @@
+{{ define "inbox" -}}
+= Capture {{ captureTitle .CreatedAt }}
+:overmind-id: {{ .ID }}
+:overmind-type: inbox
+:overmind-created-at: {{ rfc3339 .CreatedAt }}
+:overmind-updated-at: {{ rfc3339 .UpdatedAt }}
+
+{{ .Content }}
+{{ end -}}

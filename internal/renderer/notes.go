@@ -8,6 +8,9 @@ const PageTemplate = "page"
 // JournalTemplate identifies the AsciiDoc journal template.
 const JournalTemplate = "journal"
 
+// InboxTemplate identifies the AsciiDoc inbox template.
+const InboxTemplate = "inbox"
+
 // Page contains the data used by PageTemplate.
 type Page struct {
 	ID        string
@@ -23,6 +26,14 @@ type Journal struct {
 	ID        string
 	Date      string
 	Tags      []string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Inbox contains the data used by InboxTemplate.
+type Inbox struct {
+	ID        string
+	Content   string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -16,6 +16,7 @@ func New() (*urfavecli.Command, error) {
 		Usage:                 "manage the overmind knowledge base",
 		EnableShellCompletion: true,
 		Commands: []*urfavecli.Command{
+			newCaptureCommand(documentRenderer),
 			newJournalCommand(documentRenderer),
 			newPageCommand(documentRenderer),
 		},

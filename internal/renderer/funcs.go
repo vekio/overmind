@@ -27,5 +27,8 @@ func funcMap() template.FuncMap {
 			}
 			return fmt.Sprintf("%s %d, %d", spanishMonths[date.Month()-1], date.Day(), date.Year()), nil
 		},
+		"captureTitle": func(value time.Time) string {
+			return value.Format("2006-01-02 15:04:05")
+		},
 	}
 }
