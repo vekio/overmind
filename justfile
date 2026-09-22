@@ -3,7 +3,6 @@ set default-list
 build_dir := "bin"
 cli_binary_name := "overmind"
 cli_main_package := "./cmd/overmind"
-cli_config := justfile_directory() + "/config.yml"
 
 # Run all unit tests, examples, and saved fuzz regression cases
 [group('tests')]
@@ -21,30 +20,46 @@ coverage:
     go test -coverprofile=coverage.out ./...
     go tool cover -func=coverage.out
 
+# Run the AsciiDoc package tests
+[group('asciidoc')]
+[group('tests')]
+test-asciidoc:
+    go test ./pkg/asciidoc/...
+
 # Actively fuzz exact source reconstruction
+[group('asciidoc')]
 [group('tests')]
 fuzz-scanner duration="10s":
     go test ./pkg/asciidoc/lexer -run '^$' -fuzz '^FuzzScannerReconstructsSource$' -fuzztime "{{ duration }}"
 
 # Actively fuzz line classification
+[group('asciidoc')]
 [group('tests')]
 fuzz-match duration="10s":
     go test ./pkg/asciidoc/lexer -run '^$' -fuzz '^FuzzMatchLinePreservesRaw$' -fuzztime "{{ duration }}"
 
+# Actively fuzz parser source bounds
+[group('asciidoc')]
+[group('tests')]
+fuzz-parser duration="10s":
+    go test ./pkg/asciidoc/parser -run '^$' -fuzz '^FuzzParserAlwaysReturnsCompleteSourceBounds$' -fuzztime "{{ duration }}"
+
 # Actively run every fuzz target sequentially
+[group('asciidoc')]
 [group('tests')]
 fuzz duration="10s":
     just fuzz-scanner "{{ duration }}"
     just fuzz-match "{{ duration }}"
+    just fuzz-parser "{{ duration }}"
 
 # Check that go.mod and go.sum are tidy without changing them
 [group('quality')]
 mod-tidy-check:
     go mod tidy -diff
 
-# Run all repository quality checks after regenerating SQLC code
+# Run all repository quality checks
 [group('quality')]
-check: sqlc fmt-check mod-tidy-check vet test
+check: fmt-check mod-tidy-check vet test
 
 # Format Go code
 [group('quality')]
@@ -61,17 +76,7 @@ fmt-check:
 vet:
     go vet ./...
 
-# Generate the type-safe SQLite access layer from schema and queries
-[group('generation')]
-sqlc:
-    sqlc generate
-
-# Create a new sequential SQL migration: just migration add_something
-[group('database')]
-migration name:
-    goose -dir internal/infra/sqliteindex/migrations -s create "{{ name }}" sql
-
-# Generate code, run checks, and compile the CLI binary
+# Run checks and compile the CLI binary
 [group('artifacts')]
 build: check
     mkdir -p {{ build_dir }}
@@ -85,7 +90,7 @@ install: check
 # Run the Overmind CLI and forward its arguments
 [group('development')]
 run *args:
-    OVERMIND_CONFIG_FILE="{{ cli_config }}" go run {{ cli_main_package }} {{ args }}
+    go run {{ cli_main_package }} {{ args }}
 
 # Remove build artifacts
 [group('artifacts')]

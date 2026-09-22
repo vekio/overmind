@@ -7,14 +7,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	overmindcli "git.casta.me/alberto/overmind/internal/cli"
+	"git.casta.me/alberto/overmind/internal/cli"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	command, err := overmindcli.New()
+	command, err := cli.New()
 	if err == nil {
 		err = command.Run(ctx, os.Args)
 	}
