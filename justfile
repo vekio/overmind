@@ -89,8 +89,9 @@ install: check
 
 # Run the Overmind CLI and forward its arguments
 [group('development')]
+[positional-arguments]
 run *args:
-    go run {{ cli_main_package }} {{ args }}
+    go run {{ cli_main_package }} "$@"
 
 # Remove build artifacts
 [group('artifacts')]
