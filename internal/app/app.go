@@ -22,6 +22,7 @@ type NoteWriter interface {
 // NoteIndex indexes note metadata.
 type NoteIndex interface {
 	Upsert(context.Context, domain.Note) error
+	JournalExists(context.Context, domain.Date) (bool, error)
 }
 
 // App provides the application use cases.

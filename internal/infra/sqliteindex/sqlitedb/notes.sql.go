@@ -61,6 +61,24 @@ func (q *Queries) InsertNoteTag(ctx context.Context, arg InsertNoteTagParams) er
 	return err
 }
 
+const journalExists = `-- name: JournalExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM notes
+    JOIN note_attributes ON note_attributes.note_id = notes.id
+    WHERE notes.kind = 'journal'
+      AND note_attributes.name = 'date'
+      AND note_attributes.value = ?
+)
+`
+
+func (q *Queries) JournalExists(ctx context.Context, value string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, journalExists, value)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const upsertNote = `-- name: UpsertNote :exec
 INSERT INTO notes (id, kind, created_at, updated_at)
 VALUES (?, ?, ?, ?)

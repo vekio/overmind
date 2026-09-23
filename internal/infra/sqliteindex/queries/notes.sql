@@ -14,6 +14,16 @@ WHERE note_id = ?;
 INSERT INTO note_attributes (note_id, name, value)
 VALUES (?, ?, ?);
 
+-- name: JournalExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM notes
+    JOIN note_attributes ON note_attributes.note_id = notes.id
+    WHERE notes.kind = 'journal'
+      AND note_attributes.name = 'date'
+      AND note_attributes.value = ?
+);
+
 -- name: DeleteNoteTags :exec
 DELETE FROM note_tags
 WHERE note_id = ?;

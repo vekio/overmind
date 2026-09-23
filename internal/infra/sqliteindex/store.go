@@ -141,6 +141,16 @@ func (store *Store) Upsert(ctx context.Context, note domain.Note) error {
 	return nil
 }
 
+// JournalExists reports whether a journal is indexed for date.
+func (store *Store) JournalExists(ctx context.Context, date domain.Date) (bool, error) {
+	exists, err := store.queries.JournalExists(ctx, date.String())
+	if err != nil {
+		return false, fmt.Errorf("check indexed journal date: %w", err)
+	}
+
+	return exists, nil
+}
+
 type noteAttribute struct {
 	name  string
 	value string
