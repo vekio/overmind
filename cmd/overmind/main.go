@@ -10,9 +10,9 @@ import (
 
 	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/cli"
+	"git.casta.me/alberto/overmind/internal/infra/localfs"
 	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
 	"git.casta.me/alberto/overmind/internal/renderer"
-	"git.casta.me/alberto/overmind/internal/storage"
 )
 
 const notesRoot = ".overmind/notes"
@@ -33,7 +33,7 @@ func run() (runErr error) {
 	if err != nil {
 		return err
 	}
-	noteWriter := storage.NewFileWriter(notesRoot)
+	noteWriter := localfs.New(notesRoot)
 	noteIndex, err := sqliteindex.New(ctx, indexPath)
 	if err != nil {
 		return err
