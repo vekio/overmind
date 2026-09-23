@@ -44,7 +44,6 @@ type Inbox struct {
 // Bookmark contains the data used by BookmarkTemplate.
 type Bookmark struct {
 	ID        string
-	Title     string
 	URL       string
 	Tags      []string
 	CreatedAt time.Time

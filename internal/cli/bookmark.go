@@ -27,11 +27,6 @@ func newBookmarkCommand(documentRenderer *renderer.Renderer, noteWriter *storage
 			},
 		},
 		Flags: []urfavecli.Flag{
-			&urfavecli.StringFlag{
-				Name:   "title",
-				Usage:  "use `TITLE` instead of the URL",
-				Config: urfavecli.StringConfig{TrimSpace: true},
-			},
 			tagFlag("add `TAG`; repeatable"),
 		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
@@ -44,16 +39,11 @@ func newBookmarkCommand(documentRenderer *renderer.Renderer, noteWriter *storage
 			if err != nil {
 				return err
 			}
-			title := command.String("title")
-			if title == "" {
-				title = bookmarkURL
-			}
 
 			now := time.Now()
 			noteID := id.New()
 			content, err := documentRenderer.Render(ctx, renderer.BookmarkTemplate, renderer.Bookmark{
 				ID:        noteID.String(),
-				Title:     title,
 				URL:       bookmarkURL,
 				Tags:      command.StringSlice("tag"),
 				CreatedAt: now,
