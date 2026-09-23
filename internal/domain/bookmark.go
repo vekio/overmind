@@ -16,6 +16,8 @@ type Bookmark struct {
 	url      URL
 }
 
+func (Bookmark) isNote() {}
+
 // NewBookmark creates a bookmark from validated values.
 func NewBookmark(noteID uuid.UUID, url URL, tags Tags, createdAt time.Time) (Bookmark, error) {
 	if url.IsZero() {

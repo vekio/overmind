@@ -17,6 +17,8 @@ type Inbox struct {
 	content  string
 }
 
+func (Inbox) isNote() {}
+
 // NewInbox creates an inbox note from validated content.
 func NewInbox(noteID uuid.UUID, content string, createdAt time.Time) (Inbox, error) {
 	if strings.TrimSpace(content) == "" {

@@ -16,6 +16,8 @@ type Journal struct {
 	date     Date
 }
 
+func (Journal) isNote() {}
+
 // NewJournal creates a journal from validated values.
 func NewJournal(noteID uuid.UUID, date Date, tags Tags, createdAt time.Time) (Journal, error) {
 	if date.IsZero() {

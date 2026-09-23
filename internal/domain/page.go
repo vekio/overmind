@@ -16,6 +16,8 @@ type Page struct {
 	area     Area
 }
 
+func (Page) isNote() {}
+
 // NewPage creates a page from validated values.
 func NewPage(noteID uuid.UUID, title Title, area Area, tags Tags, createdAt time.Time) (Page, error) {
 	if title.IsZero() {
