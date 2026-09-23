@@ -7,12 +7,17 @@ import (
 
 	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/id"
+	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
 	"git.casta.me/alberto/overmind/internal/renderer"
 	"git.casta.me/alberto/overmind/internal/storage"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newPageCommand(documentRenderer *renderer.Renderer, noteWriter *storage.FileWriter) *urfavecli.Command {
+func newPageCommand(
+	documentRenderer *renderer.Renderer,
+	noteWriter *storage.FileWriter,
+	noteIndex *sqliteindex.Store,
+) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "page",
 		Usage:     "create a page note",
@@ -67,6 +72,9 @@ func newPageCommand(documentRenderer *renderer.Renderer, noteWriter *storage.Fil
 
 			path, err := noteWriter.Write(ctx, noteID, content)
 			if err != nil {
+				return err
+			}
+			if err := noteIndex.Upsert(ctx, page); err != nil {
 				return err
 			}
 			if _, err := fmt.Fprintln(command.Writer, path); err != nil {

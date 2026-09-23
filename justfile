@@ -59,7 +59,7 @@ mod-tidy-check:
 
 # Run all repository quality checks
 [group('quality')]
-check: fmt-check mod-tidy-check vet test
+check: sqlc fmt-check mod-tidy-check vet test
 
 # Format Go code
 [group('quality')]
@@ -75,6 +75,16 @@ fmt-check:
 [group('quality')]
 vet:
     go vet ./...
+
+# Generate the type-safe SQLite access layer
+[group('generation')]
+sqlc:
+    sqlc generate
+
+# Create a sequential SQLite migration: just migration add_something
+[group('database')]
+migration name:
+    goose -dir internal/infra/sqliteindex/migrations -s create "{{ name }}" sql
 
 # Run checks and compile the CLI binary
 [group('artifacts')]
