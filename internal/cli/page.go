@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/id"
 	"git.casta.me/alberto/overmind/internal/renderer"
 	"git.casta.me/alberto/overmind/internal/storage"
@@ -34,16 +35,32 @@ func newPageCommand(documentRenderer *renderer.Renderer, noteWriter *storage.Fil
 				return fmt.Errorf("unexpected arguments after title: %q", command.Args().Slice())
 			}
 
+			title, err := domain.NewTitle(titleArguments[0])
+			if err != nil {
+				return err
+			}
+
+			var area domain.Area
+			if value := command.String("area"); value != "" {
+				area, err = domain.NewArea(value)
+				if err != nil {
+					return err
+				}
+			}
+
+			tags, err := parseTags(command.StringSlice("tag"))
+			if err != nil {
+				return err
+			}
+
 			now := time.Now()
 			noteID := id.New()
-			content, err := documentRenderer.Render(ctx, renderer.PageTemplate, renderer.Page{
-				ID:        noteID.String(),
-				Title:     titleArguments[0],
-				Area:      command.String("area"),
-				Tags:      command.StringSlice("tag"),
-				CreatedAt: now,
-				UpdatedAt: now,
-			})
+			page, err := domain.NewPage(noteID, title, area, tags, now)
+			if err != nil {
+				return err
+			}
+
+			content, err := documentRenderer.Render(ctx, renderer.PageTemplate, page)
 			if err != nil {
 				return err
 			}

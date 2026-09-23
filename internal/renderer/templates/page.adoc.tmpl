@@ -1,10 +1,10 @@
 {{ define "page" -}}
 = {{ .Title }}
-:overmind-id: {{ .ID }}
-:overmind-type: page
-:overmind-area:{{ with .Area }} {{ . }}{{ end }}
-:overmind-tags:{{ with .Tags }} {{ comma . }}{{ end }}
-:overmind-created-at: {{ rfc3339 .CreatedAt }}
-:overmind-updated-at: {{ rfc3339 .UpdatedAt }}
+:overmind-id: {{ .Metadata.ID }}
+:overmind-type: {{ .Metadata.Kind }}
+:overmind-area:{{ with .Area.String }} {{ . }}{{ end }}
+:overmind-tags:{{ with .Metadata.Tags.Strings }} {{ comma . }}{{ end }}
+:overmind-created-at: {{ rfc3339 .Metadata.CreatedAt }}
+:overmind-updated-at: {{ rfc3339 .Metadata.UpdatedAt }}
 
 {{ end -}}

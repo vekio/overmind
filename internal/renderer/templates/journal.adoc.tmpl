@@ -1,10 +1,10 @@
 {{ define "journal" -}}
-= {{ journalTitle .Date }}
-:overmind-id: {{ .ID }}
-:overmind-type: journal
+= {{ journalTitle .Date.String }}
+:overmind-id: {{ .Metadata.ID }}
+:overmind-type: {{ .Metadata.Kind }}
 :overmind-date: {{ .Date }}
-:overmind-tags:{{ with .Tags }} {{ comma . }}{{ end }}
-:overmind-created-at: {{ rfc3339 .CreatedAt }}
-:overmind-updated-at: {{ rfc3339 .UpdatedAt }}
+:overmind-tags:{{ with .Metadata.Tags.Strings }} {{ comma . }}{{ end }}
+:overmind-created-at: {{ rfc3339 .Metadata.CreatedAt }}
+:overmind-updated-at: {{ rfc3339 .Metadata.UpdatedAt }}
 
 {{ end -}}

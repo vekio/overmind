@@ -1,10 +1,10 @@
 {{ define "bookmark" -}}
 = {{ .URL }}
-:overmind-id: {{ .ID }}
-:overmind-type: bookmark
+:overmind-id: {{ .Metadata.ID }}
+:overmind-type: {{ .Metadata.Kind }}
 :overmind-url: {{ .URL }}
-:overmind-tags:{{ with .Tags }} {{ comma . }}{{ end }}
-:overmind-created-at: {{ rfc3339 .CreatedAt }}
-:overmind-updated-at: {{ rfc3339 .UpdatedAt }}
+:overmind-tags:{{ with .Metadata.Tags.Strings }} {{ comma . }}{{ end }}
+:overmind-created-at: {{ rfc3339 .Metadata.CreatedAt }}
+:overmind-updated-at: {{ rfc3339 .Metadata.UpdatedAt }}
 
 {{ end -}}

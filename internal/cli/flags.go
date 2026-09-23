@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"git.casta.me/alberto/overmind/internal/domain"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
@@ -19,4 +20,17 @@ func tagFlag(usage string) urfavecli.Flag {
 		Aliases: []string{"t"},
 		Usage:   usage,
 	}
+}
+
+func parseTags(values []string) (domain.Tags, error) {
+	tags := make([]domain.Tag, len(values))
+	for index, value := range values {
+		tag, err := domain.NewTag(value)
+		if err != nil {
+			return domain.Tags{}, err
+		}
+		tags[index] = tag
+	}
+
+	return domain.NewTags(tags...)
 }

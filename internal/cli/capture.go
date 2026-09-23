@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/id"
 	"git.casta.me/alberto/overmind/internal/renderer"
 	"git.casta.me/alberto/overmind/internal/storage"
@@ -39,12 +40,12 @@ func newCaptureCommand(documentRenderer *renderer.Renderer, noteWriter *storage.
 
 			now := time.Now()
 			noteID := id.New()
-			content, err := documentRenderer.Render(ctx, renderer.InboxTemplate, renderer.Inbox{
-				ID:        noteID.String(),
-				Content:   text,
-				CreatedAt: now,
-				UpdatedAt: now,
-			})
+			inbox, err := domain.NewInbox(noteID, text, now)
+			if err != nil {
+				return err
+			}
+
+			content, err := documentRenderer.Render(ctx, renderer.InboxTemplate, inbox)
 			if err != nil {
 				return err
 			}

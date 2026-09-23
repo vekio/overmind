@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/id"
 	"git.casta.me/alberto/overmind/internal/renderer"
 	"git.casta.me/alberto/overmind/internal/storage"
@@ -23,15 +24,20 @@ func newJournalCommand(documentRenderer *renderer.Renderer, noteWriter *storage.
 				return fmt.Errorf("unexpected arguments: %q", command.Args().Slice())
 			}
 
+			tags, err := parseTags(command.StringSlice("tag"))
+			if err != nil {
+				return err
+			}
+
 			now := time.Now()
 			noteID := id.New()
-			content, err := documentRenderer.Render(ctx, renderer.JournalTemplate, renderer.Journal{
-				ID:        noteID.String(),
-				Date:      now.Format(time.DateOnly),
-				Tags:      command.StringSlice("tag"),
-				CreatedAt: now,
-				UpdatedAt: now,
-			})
+			date := domain.DateFromTime(now)
+			journal, err := domain.NewJournal(noteID, date, tags, now)
+			if err != nil {
+				return err
+			}
+
+			content, err := documentRenderer.Render(ctx, renderer.JournalTemplate, journal)
 			if err != nil {
 				return err
 			}

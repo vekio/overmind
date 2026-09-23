@@ -3,10 +3,9 @@ package cli
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 	"time"
 
+	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/id"
 	"git.casta.me/alberto/overmind/internal/renderer"
 	"git.casta.me/alberto/overmind/internal/storage"
@@ -35,20 +34,23 @@ func newBookmarkCommand(documentRenderer *renderer.Renderer, noteWriter *storage
 				return fmt.Errorf("unexpected arguments after URL: %q", command.Args().Slice())
 			}
 
-			bookmarkURL, err := normalizeBookmarkURL(urlArguments[0])
+			bookmarkURL, err := domain.NewURL(urlArguments[0])
+			if err != nil {
+				return err
+			}
+			tags, err := parseTags(command.StringSlice("tag"))
 			if err != nil {
 				return err
 			}
 
 			now := time.Now()
 			noteID := id.New()
-			content, err := documentRenderer.Render(ctx, renderer.BookmarkTemplate, renderer.Bookmark{
-				ID:        noteID.String(),
-				URL:       bookmarkURL,
-				Tags:      command.StringSlice("tag"),
-				CreatedAt: now,
-				UpdatedAt: now,
-			})
+			bookmark, err := domain.NewBookmark(noteID, bookmarkURL, tags, now)
+			if err != nil {
+				return err
+			}
+
+			content, err := documentRenderer.Render(ctx, renderer.BookmarkTemplate, bookmark)
 			if err != nil {
 				return err
 			}
@@ -63,15 +65,4 @@ func newBookmarkCommand(documentRenderer *renderer.Renderer, noteWriter *storage
 			return nil
 		},
 	}
-}
-
-func normalizeBookmarkURL(value string) (string, error) {
-	parsed, err := url.Parse(strings.TrimSpace(value))
-	if err != nil {
-		return "", fmt.Errorf("invalid bookmark URL: %w", err)
-	}
-	if parsed.Host == "" || parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "", fmt.Errorf("invalid bookmark URL: expected an HTTP or HTTPS URL")
-	}
-	return parsed.String(), nil
 }

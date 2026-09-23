@@ -6,14 +6,14 @@ import (
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-const defaultStorageRoot = ".overmind"
+const defaultNotesRoot = ".overmind/notes"
 
 func New() (*urfavecli.Command, error) {
 	documentRenderer, err := renderer.New()
 	if err != nil {
 		return nil, err
 	}
-	noteWriter := storage.NewFileWriter(defaultStorageRoot)
+	noteWriter := storage.NewFileWriter(defaultNotesRoot)
 
 	return &urfavecli.Command{
 		Name:                  "overmind",
