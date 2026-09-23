@@ -11,6 +11,9 @@ const JournalTemplate = "journal"
 // InboxTemplate identifies the AsciiDoc inbox template.
 const InboxTemplate = "inbox"
 
+// BookmarkTemplate identifies the AsciiDoc bookmark template.
+const BookmarkTemplate = "bookmark"
+
 // Page contains the data used by PageTemplate.
 type Page struct {
 	ID        string
@@ -34,6 +37,16 @@ type Journal struct {
 type Inbox struct {
 	ID        string
 	Content   string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Bookmark contains the data used by BookmarkTemplate.
+type Bookmark struct {
+	ID        string
+	Title     string
+	URL       string
+	Tags      []string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
