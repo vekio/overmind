@@ -7,10 +7,11 @@ import (
 
 	"git.casta.me/alberto/overmind/internal/id"
 	"git.casta.me/alberto/overmind/internal/renderer"
+	"git.casta.me/alberto/overmind/internal/storage"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newPageCommand(documentRenderer *renderer.Renderer) *urfavecli.Command {
+func newPageCommand(documentRenderer *renderer.Renderer, noteWriter *storage.FileWriter) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "page",
 		Usage:     "create a page note",
@@ -34,8 +35,9 @@ func newPageCommand(documentRenderer *renderer.Renderer) *urfavecli.Command {
 			}
 
 			now := time.Now()
+			noteID := id.New()
 			content, err := documentRenderer.Render(ctx, renderer.PageTemplate, renderer.Page{
-				ID:        id.New().String(),
+				ID:        noteID.String(),
 				Title:     titleArguments[0],
 				Area:      command.String("area"),
 				Tags:      command.StringSlice("tag"),
@@ -46,8 +48,12 @@ func newPageCommand(documentRenderer *renderer.Renderer) *urfavecli.Command {
 				return err
 			}
 
-			if _, err := command.Writer.Write(content); err != nil {
-				return fmt.Errorf("write rendered page: %w", err)
+			path, err := noteWriter.Write(ctx, noteID, content)
+			if err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(command.Writer, path); err != nil {
+				return fmt.Errorf("write created page path: %w", err)
 			}
 			return nil
 		},

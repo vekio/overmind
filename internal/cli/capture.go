@@ -10,10 +10,11 @@ import (
 
 	"git.casta.me/alberto/overmind/internal/id"
 	"git.casta.me/alberto/overmind/internal/renderer"
+	"git.casta.me/alberto/overmind/internal/storage"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newCaptureCommand(documentRenderer *renderer.Renderer) *urfavecli.Command {
+func newCaptureCommand(documentRenderer *renderer.Renderer, noteWriter *storage.FileWriter) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "capture",
 		Usage:     "capture a quick inbox note from text or standard input",
@@ -37,8 +38,9 @@ func newCaptureCommand(documentRenderer *renderer.Renderer) *urfavecli.Command {
 			}
 
 			now := time.Now()
+			noteID := id.New()
 			content, err := documentRenderer.Render(ctx, renderer.InboxTemplate, renderer.Inbox{
-				ID:        id.New().String(),
+				ID:        noteID.String(),
 				Content:   text,
 				CreatedAt: now,
 				UpdatedAt: now,
@@ -47,8 +49,12 @@ func newCaptureCommand(documentRenderer *renderer.Renderer) *urfavecli.Command {
 				return err
 			}
 
-			if _, err := command.Writer.Write(content); err != nil {
-				return fmt.Errorf("write rendered inbox note: %w", err)
+			path, err := noteWriter.Write(ctx, noteID, content)
+			if err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(command.Writer, path); err != nil {
+				return fmt.Errorf("write captured note path: %w", err)
 			}
 			return nil
 		},
