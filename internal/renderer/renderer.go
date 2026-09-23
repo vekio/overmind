@@ -7,6 +7,8 @@ import (
 	"embed"
 	"fmt"
 	"text/template"
+
+	"git.casta.me/alberto/overmind/internal/domain"
 )
 
 //go:embed templates/*.tmpl
@@ -30,14 +32,18 @@ func New() (*Renderer, error) {
 	return &Renderer{templates: templates}, nil
 }
 
-// Render executes a template with data.
-func (renderer *Renderer) Render(ctx context.Context, name string, data any) ([]byte, error) {
+// Render renders a note.
+func (renderer *Renderer) Render(ctx context.Context, note domain.Note) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	name, err := templateName(note)
+	if err != nil {
 		return nil, err
 	}
 
 	var output bytes.Buffer
-	if err := renderer.templates.ExecuteTemplate(&output, name, data); err != nil {
+	if err := renderer.templates.ExecuteTemplate(&output, name, note); err != nil {
 		return nil, fmt.Errorf("render template %q: %w", name, err)
 	}
 

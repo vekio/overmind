@@ -3,21 +3,13 @@ package cli
 import (
 	"context"
 	"fmt"
-	"time"
 
+	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/id"
-	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
-	"git.casta.me/alberto/overmind/internal/renderer"
-	"git.casta.me/alberto/overmind/internal/storage"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newPageCommand(
-	documentRenderer *renderer.Renderer,
-	noteWriter *storage.FileWriter,
-	noteIndex *sqliteindex.Store,
-) *urfavecli.Command {
+func newPageCommand(application *app.App) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "page",
 		Usage:     "create a page note",
@@ -58,23 +50,8 @@ func newPageCommand(
 				return err
 			}
 
-			now := time.Now()
-			noteID := id.New()
-			page, err := domain.NewPage(noteID, title, area, tags, now)
+			path, err := application.CreatePage(ctx, title, area, tags)
 			if err != nil {
-				return err
-			}
-
-			content, err := documentRenderer.Render(ctx, renderer.PageTemplate, page)
-			if err != nil {
-				return err
-			}
-
-			path, err := noteWriter.Write(ctx, noteID, content)
-			if err != nil {
-				return err
-			}
-			if err := noteIndex.Upsert(ctx, page); err != nil {
 				return err
 			}
 			if _, err := fmt.Fprintln(command.Writer, path); err != nil {

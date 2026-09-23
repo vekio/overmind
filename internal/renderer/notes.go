@@ -1,13 +1,29 @@
 package renderer
 
-// PageTemplate identifies the AsciiDoc page template.
-const PageTemplate = "page"
+import (
+	"fmt"
 
-// JournalTemplate identifies the AsciiDoc journal template.
-const JournalTemplate = "journal"
+	"git.casta.me/alberto/overmind/internal/domain"
+)
 
-// InboxTemplate identifies the AsciiDoc inbox template.
-const InboxTemplate = "inbox"
+const (
+	pageTemplate     = "page"
+	journalTemplate  = "journal"
+	inboxTemplate    = "inbox"
+	bookmarkTemplate = "bookmark"
+)
 
-// BookmarkTemplate identifies the AsciiDoc bookmark template.
-const BookmarkTemplate = "bookmark"
+func templateName(note domain.Note) (string, error) {
+	switch note.(type) {
+	case domain.Page:
+		return pageTemplate, nil
+	case domain.Journal:
+		return journalTemplate, nil
+	case domain.Inbox:
+		return inboxTemplate, nil
+	case domain.Bookmark:
+		return bookmarkTemplate, nil
+	default:
+		return "", fmt.Errorf("render unsupported note type %T", note)
+	}
+}

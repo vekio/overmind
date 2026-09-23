@@ -3,21 +3,13 @@ package cli
 import (
 	"context"
 	"fmt"
-	"time"
 
+	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/id"
-	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
-	"git.casta.me/alberto/overmind/internal/renderer"
-	"git.casta.me/alberto/overmind/internal/storage"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newBookmarkCommand(
-	documentRenderer *renderer.Renderer,
-	noteWriter *storage.FileWriter,
-	noteIndex *sqliteindex.Store,
-) *urfavecli.Command {
+func newBookmarkCommand(application *app.App) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "bookmark",
 		Usage:     "save a link for later",
@@ -48,23 +40,8 @@ func newBookmarkCommand(
 				return err
 			}
 
-			now := time.Now()
-			noteID := id.New()
-			bookmark, err := domain.NewBookmark(noteID, bookmarkURL, tags, now)
+			path, err := application.CreateBookmark(ctx, bookmarkURL, tags)
 			if err != nil {
-				return err
-			}
-
-			content, err := documentRenderer.Render(ctx, renderer.BookmarkTemplate, bookmark)
-			if err != nil {
-				return err
-			}
-
-			path, err := noteWriter.Write(ctx, noteID, content)
-			if err != nil {
-				return err
-			}
-			if err := noteIndex.Upsert(ctx, bookmark); err != nil {
 				return err
 			}
 			if _, err := fmt.Fprintln(command.Writer, path); err != nil {
