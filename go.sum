@@ -26,10 +26,16 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/urfave/cli/v3 v3.11.0 h1:P/euJp99kb9p0tlVY+iYTLYYTAQlfl0hR2gUO1Img1Q=
 github.com/urfave/cli/v3 v3.11.0/go.mod h1:ysVLtOEmg2tOy6PknnYVhDoouyC/6N42TMeoMzskhso=
+github.com/vekio/config v0.6.0 h1:W3li/ELtvrzrq2fnRuR8Gcm1vCoN7BYH72snqRcn1d4=
+github.com/vekio/config v0.6.0/go.mod h1:DS6HqUOmePIJ3p0nQNFrsweofaLLBlNbOVTdrGIlxv8=
+github.com/vekio/config/urfave v0.4.0 h1:NiNMTiqcfnKSb+Cc3C5eZFyK8WeKx/eWf96+PgUivvc=
+github.com/vekio/config/urfave v0.4.0/go.mod h1:BPyJ69MNHLLq+s0mN5vC0vPsC4W49XPZFlJlyGvlsgQ=
 github.com/vekio/x v0.1.1 h1:wwJUfykAhId0TKeD2E0hRmqoj68BFG1GeuVp4N4+uQI=
 github.com/vekio/x v0.1.1/go.mod h1:C1/qVGQF0d3ObOQIn7JVI8ECQP3okrfjNQLnjQ8ZHuo=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=
 go.uber.org/multierr v1.11.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN80Y=
+go.yaml.in/yaml/v4 v4.0.0-rc.6 h1:1h7H1ohdUh93/FyE4YaDa1Zh64K6VVbjF4K6WUxMtH4=
+go.yaml.in/yaml/v4 v4.0.0-rc.6/go.mod h1:aZqd9kCMsGL7AuUv/m/PvWLdg5sjJsZ4oHDEnfPPfY0=
 golang.org/x/mod v0.41.0 h1:qJmnOUb4YB+FsEuM3HcWucdZASCPGhsX6uljO6pog0c=
 golang.org/x/mod v0.41.0/go.mod h1:Ek9pY8RKWXwsWvd3rQiHYtMqkjSUV+s1Rj7j4H5Ur6o=
 golang.org/x/sync v0.23.0 h1:KameEIfc1IkluZyXWLn39Wd4tURc6GbCiISGiZm2bQk=

@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"git.casta.me/alberto/overmind/internal/app"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newJournalCommand(application *app.App) *urfavecli.Command {
+func newJournalCommand(newClient ClientFactory) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:  "journal",
 		Usage: "create a journal note",
@@ -25,12 +24,16 @@ func newJournalCommand(application *app.App) *urfavecli.Command {
 				return err
 			}
 
-			path, err := application.CreateJournal(ctx, tags)
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, path); err != nil {
-				return fmt.Errorf("write created journal path: %w", err)
+			location, err := client.CreateJournal(ctx, tags)
+			if err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(command.Writer, location); err != nil {
+				return fmt.Errorf("write created journal location: %w", err)
 			}
 			return nil
 		},

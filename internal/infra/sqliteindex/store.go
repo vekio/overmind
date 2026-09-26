@@ -13,12 +13,15 @@ import (
 
 	"git.casta.me/alberto/overmind/internal/domain"
 	"git.casta.me/alberto/overmind/internal/infra/sqliteindex/sqlitedb"
+	"git.casta.me/alberto/overmind/internal/ports"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 )
 
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
+
+var _ ports.NoteIndex = (*Store)(nil)
 
 // Store is a SQLite note index.
 type Store struct {

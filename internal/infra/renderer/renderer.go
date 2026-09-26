@@ -9,7 +9,10 @@ import (
 	"text/template"
 
 	"git.casta.me/alberto/overmind/internal/domain"
+	"git.casta.me/alberto/overmind/internal/ports"
 )
+
+var _ ports.NoteRenderer = (*Renderer)(nil)
 
 //go:embed templates/*.tmpl
 var templateFS embed.FS

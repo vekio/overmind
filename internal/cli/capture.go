@@ -7,11 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"git.casta.me/alberto/overmind/internal/app"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newCaptureCommand(application *app.App) *urfavecli.Command {
+func newCaptureCommand(newClient ClientFactory) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "capture",
 		Usage:     "capture a quick inbox note from text or standard input",
@@ -34,12 +33,16 @@ func newCaptureCommand(application *app.App) *urfavecli.Command {
 				return err
 			}
 
-			path, err := application.Capture(ctx, text)
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, path); err != nil {
-				return fmt.Errorf("write captured note path: %w", err)
+			location, err := client.Capture(ctx, text)
+			if err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(command.Writer, location); err != nil {
+				return fmt.Errorf("write captured note location: %w", err)
 			}
 			return nil
 		},

@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"git.casta.me/alberto/overmind/internal/ports"
 	"github.com/vekio/x/file"
 	"uuid"
 )
+
+var _ ports.NoteWriter = (*Writer)(nil)
 
 // Writer stores notes in a directory.
 type Writer struct {

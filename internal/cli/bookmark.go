@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/domain"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newBookmarkCommand(application *app.App) *urfavecli.Command {
+func newBookmarkCommand(newClient ClientFactory) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "bookmark",
 		Usage:     "save a link for later",
@@ -40,12 +39,16 @@ func newBookmarkCommand(application *app.App) *urfavecli.Command {
 				return err
 			}
 
-			path, err := application.CreateBookmark(ctx, bookmarkURL, tags)
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, path); err != nil {
-				return fmt.Errorf("write created bookmark path: %w", err)
+			location, err := client.CreateBookmark(ctx, bookmarkURL, tags)
+			if err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(command.Writer, location); err != nil {
+				return fmt.Errorf("write created bookmark location: %w", err)
 			}
 			return nil
 		},

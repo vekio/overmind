@@ -8,15 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"git.casta.me/alberto/overmind/internal/app"
+	"git.casta.me/alberto/overmind/internal/bootstrap"
 	"git.casta.me/alberto/overmind/internal/cli"
-	"git.casta.me/alberto/overmind/internal/infra/localfs"
-	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
-	"git.casta.me/alberto/overmind/internal/renderer"
+	appconfig "git.casta.me/alberto/overmind/internal/config"
+	urfavecli "github.com/urfave/cli/v3"
+	configlib "github.com/vekio/config"
+	configurfave "github.com/vekio/config/urfave"
 )
-
-const notesRoot = ".overmind/notes"
-const indexPath = ".overmind/index.db"
 
 func main() {
 	if err := run(); err != nil {
@@ -29,21 +27,29 @@ func run() (runErr error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	documentRenderer, err := renderer.New()
+	configFile, err := appconfig.NewFile()
 	if err != nil {
 		return err
 	}
-	noteWriter := localfs.New(notesRoot)
-	noteIndex, err := sqliteindex.New(ctx, indexPath)
-	if err != nil {
-		return err
-	}
+	runtime := bootstrap.New(configFile)
 	defer func() {
-		if err := noteIndex.Close(); err != nil {
-			runErr = errors.Join(runErr, fmt.Errorf("close SQLite index: %w", err))
+		if err := runtime.Close(); err != nil {
+			runErr = errors.Join(runErr, fmt.Errorf("close application: %w", err))
 		}
 	}()
 
-	application := app.New(documentRenderer, noteWriter, noteIndex)
-	return cli.New(application).Run(ctx, os.Args)
+	return newCommand(configFile, runtime).Run(ctx, os.Args)
+}
+
+func newCommand(configFile *configlib.ConfigFile[appconfig.Settings], runtime *bootstrap.Runtime) *urfavecli.Command {
+	command := cli.New(func(ctx context.Context) (cli.Client, error) {
+		application, err := runtime.Application(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return cli.NewLocalClient(application), nil
+	})
+	command.Flags = append(command.Flags, configurfave.NewConfigFlag(configFile))
+	command.Commands = append(command.Commands, configurfave.NewConfigCommand(configFile))
+	return command
 }

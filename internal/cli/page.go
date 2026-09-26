@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/domain"
 	urfavecli "github.com/urfave/cli/v3"
 )
 
-func newPageCommand(application *app.App) *urfavecli.Command {
+func newPageCommand(newClient ClientFactory) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "page",
 		Usage:     "create a page note",
@@ -50,12 +49,16 @@ func newPageCommand(application *app.App) *urfavecli.Command {
 				return err
 			}
 
-			path, err := application.CreatePage(ctx, title, area, tags)
+			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, path); err != nil {
-				return fmt.Errorf("write created page path: %w", err)
+			location, err := client.CreatePage(ctx, title, area, tags)
+			if err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintln(command.Writer, location); err != nil {
+				return fmt.Errorf("write created page location: %w", err)
 			}
 			return nil
 		},

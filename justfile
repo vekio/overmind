@@ -3,6 +3,7 @@ set default-list
 build_dir := "bin"
 cli_binary_name := "overmind"
 cli_main_package := "./cmd/overmind"
+cli_config := justfile_directory() + "/config.yml"
 
 # Run all unit tests, examples, and saved fuzz regression cases
 [group('tests')]
@@ -101,7 +102,7 @@ install: check
 [group('development')]
 [positional-arguments]
 run *args:
-    go run {{ cli_main_package }} "$@"
+    OVERMIND_CONFIG_FILE="{{ cli_config }}" go run {{ cli_main_package }} "$@"
 
 # Remove build artifacts
 [group('artifacts')]
