@@ -3,9 +3,10 @@ package ports
 
 import (
 	"context"
+	"time"
+	"uuid"
 
 	"git.casta.me/alberto/overmind/internal/domain"
-	"uuid"
 )
 
 // IDGenerator generates note identifiers.
@@ -27,4 +28,36 @@ type NoteWriter interface {
 type NoteIndex interface {
 	Upsert(context.Context, domain.Note) error
 	JournalExists(context.Context, domain.Date) (bool, error)
+	ReplaceAll(context.Context, []IndexRecord) error
+}
+
+// NoteLister reads indexed note metadata without depending on a presentation.
+type NoteLister interface {
+	List(context.Context) ([]IndexRecord, error)
+}
+
+// NoteWalker visits AsciiDoc note files and supplies their content.
+type NoteWalker interface {
+	Walk(context.Context, func(path string, content []byte) error) error
+}
+
+// NoteParser recovers indexable metadata from one document.
+type NoteParser interface {
+	Parse([]byte) (IndexRecord, error)
+}
+
+// IndexRecord contains metadata recovered from one note document.
+type IndexRecord struct {
+	ID         uuid.UUID
+	Kind       domain.NoteKind
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Attributes []IndexAttribute
+	Tags       []string
+}
+
+// IndexAttribute is a searchable name-value pair associated with a note.
+type IndexAttribute struct {
+	Name  string
+	Value string
 }

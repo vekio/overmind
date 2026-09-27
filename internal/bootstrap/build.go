@@ -7,6 +7,7 @@ import (
 
 	"git.casta.me/alberto/overmind/internal/app"
 	appconfig "git.casta.me/alberto/overmind/internal/config"
+	"git.casta.me/alberto/overmind/internal/infra/asciidocnote"
 	"git.casta.me/alberto/overmind/internal/infra/idgenerator"
 	"git.casta.me/alberto/overmind/internal/infra/localfs"
 	"git.casta.me/alberto/overmind/internal/infra/renderer"
@@ -26,12 +27,16 @@ func buildApplication(
 	if err != nil {
 		return nil, nil, err
 	}
+	notesPath := filepath.Join(settings.VaultPath, "notes")
 
 	application := app.New(app.Dependencies{
 		IDGenerator: idgenerator.New(),
 		Renderer:    documentRenderer,
-		Writer:      localfs.New(filepath.Join(settings.VaultPath, "notes")),
+		Writer:      localfs.New(notesPath),
 		Index:       index,
+		Lister:      index,
+		Walker:      localfs.NewWalker(notesPath),
+		Parser:      asciidocnote.Parser{},
 	})
 	// Add future closable resources in creation order.
 	return application, []io.Closer{index}, nil

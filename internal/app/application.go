@@ -4,6 +4,7 @@ package app
 // Application groups the use-case handlers exposed by Overmind.
 type Application struct {
 	Commands Commands
+	Queries  Queries
 }
 
 // Commands contains the application's state-changing handlers.
@@ -12,6 +13,12 @@ type Commands struct {
 	CreateJournal  *CreateJournalHandler
 	Capture        *CaptureHandler
 	CreateBookmark *CreateBookmarkHandler
+	RebuildIndex   *RebuildIndexHandler
+}
+
+// Queries contains the application's read-only handlers.
+type Queries struct {
+	ListNotes *ListNotesHandler
 }
 
 // New creates the application handlers.
@@ -24,6 +31,8 @@ func New(dependencies Dependencies) *Application {
 			CreateJournal:  newCreateJournalHandler(saver, dependencies.Index, dependencies.IDGenerator),
 			Capture:        newCaptureHandler(saver, dependencies.IDGenerator),
 			CreateBookmark: newCreateBookmarkHandler(saver, dependencies.IDGenerator),
+			RebuildIndex:   newRebuildIndexHandler(dependencies.Walker, dependencies.Parser, dependencies.Index),
 		},
+		Queries: Queries{ListNotes: newListNotesHandler(dependencies.Lister)},
 	}
 }

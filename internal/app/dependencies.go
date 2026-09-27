@@ -8,4 +8,7 @@ type Dependencies struct {
 	Renderer    ports.NoteRenderer
 	Writer      ports.NoteWriter
 	Index       ports.NoteIndex
+	Lister      ports.NoteLister
+	Walker      ports.NoteWalker
+	Parser      ports.NoteParser
 }

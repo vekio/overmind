@@ -31,3 +31,18 @@ WHERE note_id = ?;
 -- name: InsertNoteTag :exec
 INSERT INTO note_tags (note_id, tag, position)
 VALUES (?, ?, ?);
+
+-- name: ListNotes :many
+SELECT id, kind, created_at, updated_at
+FROM notes
+ORDER BY updated_at DESC, id DESC;
+
+-- name: ListNoteAttributes :many
+SELECT note_id, name, value
+FROM note_attributes
+ORDER BY note_id, name;
+
+-- name: ListNoteTags :many
+SELECT note_id, tag, position
+FROM note_tags
+ORDER BY note_id, position;

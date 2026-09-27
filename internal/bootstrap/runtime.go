@@ -31,7 +31,7 @@ func (runtime *Runtime) Application(ctx context.Context) (*app.Application, erro
 		return runtime.application, nil
 	}
 
-	settings, err := runtime.configFile.LoadOrCreate()
+	settings, err := runtime.configFile.Load()
 	if err != nil {
 		return nil, err
 	}

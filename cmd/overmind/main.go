@@ -13,7 +13,6 @@ import (
 	appconfig "git.casta.me/alberto/overmind/internal/config"
 	urfavecli "github.com/urfave/cli/v3"
 	configlib "github.com/vekio/config"
-	configurfave "github.com/vekio/config/urfave"
 )
 
 func main() {
@@ -42,14 +41,11 @@ func run() (runErr error) {
 }
 
 func newCommand(configFile *configlib.ConfigFile[appconfig.Settings], runtime *bootstrap.Runtime) *urfavecli.Command {
-	command := cli.New(func(ctx context.Context) (cli.Client, error) {
+	return cli.New(configFile, func(ctx context.Context) (cli.Client, error) {
 		application, err := runtime.Application(ctx)
 		if err != nil {
 			return nil, err
 		}
 		return cli.NewLocalClient(application), nil
 	})
-	command.Flags = append(command.Flags, configurfave.NewConfigFlag(configFile))
-	command.Commands = append(command.Commands, configurfave.NewConfigCommand(configFile))
-	return command
 }

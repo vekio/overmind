@@ -79,6 +79,98 @@ func (q *Queries) JournalExists(ctx context.Context, value string) (bool, error)
 	return exists, err
 }
 
+const listNoteAttributes = `-- name: ListNoteAttributes :many
+SELECT note_id, name, value
+FROM note_attributes
+ORDER BY note_id, name
+`
+
+func (q *Queries) ListNoteAttributes(ctx context.Context) ([]NoteAttribute, error) {
+	rows, err := q.db.QueryContext(ctx, listNoteAttributes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NoteAttribute
+	for rows.Next() {
+		var i NoteAttribute
+		if err := rows.Scan(&i.NoteID, &i.Name, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNoteTags = `-- name: ListNoteTags :many
+SELECT note_id, tag, position
+FROM note_tags
+ORDER BY note_id, position
+`
+
+func (q *Queries) ListNoteTags(ctx context.Context) ([]NoteTag, error) {
+	rows, err := q.db.QueryContext(ctx, listNoteTags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NoteTag
+	for rows.Next() {
+		var i NoteTag
+		if err := rows.Scan(&i.NoteID, &i.Tag, &i.Position); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNotes = `-- name: ListNotes :many
+SELECT id, kind, created_at, updated_at
+FROM notes
+ORDER BY updated_at DESC, id DESC
+`
+
+func (q *Queries) ListNotes(ctx context.Context) ([]Note, error) {
+	rows, err := q.db.QueryContext(ctx, listNotes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Note
+	for rows.Next() {
+		var i Note
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertNote = `-- name: UpsertNote :exec
 INSERT INTO notes (id, kind, created_at, updated_at)
 VALUES (?, ?, ?, ?)

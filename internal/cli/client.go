@@ -13,6 +13,8 @@ type Client interface {
 	Capture(context.Context, string) (string, error)
 	CreateJournal(context.Context, domain.Tags) (string, error)
 	CreatePage(context.Context, domain.Title, domain.Area, domain.Tags) (string, error)
+	RebuildIndex(context.Context) (int, error)
+	ListNotes(context.Context) ([]app.ListedNote, error)
 }
 
 // ClientFactory creates the client after command flags have been parsed.
@@ -46,4 +48,14 @@ func (client *LocalClient) CreateJournal(ctx context.Context, tags domain.Tags) 
 func (client *LocalClient) CreatePage(ctx context.Context, title domain.Title, area domain.Area, tags domain.Tags) (string, error) {
 	result, err := client.application.Commands.CreatePage.Handle(ctx, app.CreatePageCommand{Title: title, Area: area, Tags: tags})
 	return result.Path, err
+}
+
+func (client *LocalClient) RebuildIndex(ctx context.Context) (int, error) {
+	result, err := client.application.Commands.RebuildIndex.Handle(ctx)
+	return result.Count, err
+}
+
+func (client *LocalClient) ListNotes(ctx context.Context) ([]app.ListedNote, error) {
+	result, err := client.application.Queries.ListNotes.Handle(ctx)
+	return result.Notes, err
 }
