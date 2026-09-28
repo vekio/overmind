@@ -56,4 +56,14 @@ func TestNotesDeleteRequiresConfirmation(t *testing.T) {
 	if len(client.deleted) != 1 || client.deleted[0] != id {
 		t.Fatalf("deleted IDs = %v", client.deleted)
 	}
+	next, _ = m.Update(noteDeleteResult{})
+	m = next.(model)
+	if m.screen != screenBusy || m.notification.text != "Note deleted" {
+		t.Fatalf("delete did not refresh notes: screen=%d notification=%q", m.screen, m.notification.text)
+	}
+	next, _ = m.Update(notesResult{})
+	m = next.(model)
+	if m.screen != screenNotes || m.noteCount != 0 {
+		t.Fatalf("refreshed notes = screen %d count %d", m.screen, m.noteCount)
+	}
 }

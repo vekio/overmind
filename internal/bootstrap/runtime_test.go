@@ -1,10 +1,15 @@
 package bootstrap
 
 import (
+	"context"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
+
+	appconfig "git.casta.me/alberto/overmind/internal/config"
 )
 
 type recordingCloser struct {
@@ -39,5 +44,35 @@ func TestRuntimeClosesAllResourcesInReverseOrder(t *testing.T) {
 	}
 	if len(calls) != 2 {
 		t.Errorf("second Close() repeated resource close: %v", calls)
+	}
+}
+
+func TestRuntimeLoadsConfigurationLazilyAndReusesApplication(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	configFile, err := appconfig.NewFile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := configFile.SetPath(filepath.Join(root, "config.yml")); err != nil {
+		t.Fatal(err)
+	}
+	runtime := New(configFile)
+	if _, err := runtime.Application(ctx); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("application before setup = %v", err)
+	}
+	if err := configFile.Create(appconfig.Settings{Mode: appconfig.ModeLocal, VaultPath: filepath.Join(root, "vault")}); err != nil {
+		t.Fatal(err)
+	}
+	first, err := runtime.Application(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := runtime.Application(ctx)
+	if err != nil || first != second {
+		t.Fatalf("runtime returned another application: %p, %p, %v", first, second, err)
+	}
+	if err := runtime.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
