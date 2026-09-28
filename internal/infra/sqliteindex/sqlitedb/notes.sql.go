@@ -79,6 +79,23 @@ func (q *Queries) JournalExists(ctx context.Context, value string) (bool, error)
 	return exists, err
 }
 
+const journalID = `-- name: JournalID :one
+SELECT notes.id
+FROM notes
+JOIN note_attributes ON note_attributes.note_id = notes.id
+WHERE notes.kind = 'journal'
+  AND note_attributes.name = 'date'
+  AND note_attributes.value = ?
+LIMIT 1
+`
+
+func (q *Queries) JournalID(ctx context.Context, value string) (string, error) {
+	row := q.db.QueryRowContext(ctx, journalID, value)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const listNoteAttributes = `-- name: ListNoteAttributes :many
 SELECT note_id, name, value
 FROM note_attributes

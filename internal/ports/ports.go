@@ -24,10 +24,17 @@ type NoteWriter interface {
 	Write(context.Context, uuid.UUID, []byte) (string, error)
 }
 
+// NoteReader reads a note document by its identifier.
+type NoteReader interface {
+	Read(context.Context, uuid.UUID) ([]byte, error)
+}
+
 // NoteIndex indexes note metadata.
 type NoteIndex interface {
 	Upsert(context.Context, domain.Note) error
+	UpsertRecord(context.Context, IndexRecord) error
 	JournalExists(context.Context, domain.Date) (bool, error)
+	JournalID(context.Context, domain.Date) (uuid.UUID, bool, error)
 	ReplaceAll(context.Context, []IndexRecord) error
 }
 

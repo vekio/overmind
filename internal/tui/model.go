@@ -5,51 +5,49 @@ import (
 	"fmt"
 
 	"charm.land/bubbles/v2/table"
-	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"git.casta.me/alberto/overmind/internal/app"
 )
 
 type screen uint8
 
 const (
+	rebuildOption askOptionID = "rebuild"
+	cancelOption  askOptionID = "cancel"
+)
+
+const (
 	screenMenu screen = iota
 	screenForm
-	screenCapture
-	screenConfirm
+	screenAsk
 	screenBusy
 	screenNotes
 )
 
 type model struct {
-	ctx    context.Context
-	client Client
-	input  textinput.Model
-	editor textarea.Model
-	notes  table.Model
+	ctx          context.Context
+	client       Client
+	formInputs   []textinput.Model
+	formLabels   []string
+	formFocus    int
+	notes        table.Model
+	ask          ask
+	notification notification
+	noteEditor   noteEditorState
+	listedNotes  []app.ListedNote
 
-	screen     screen
-	selected   int
-	action     action
-	fields     []field
-	fieldIndex int
-	status     string
-	problem    string
-	width      int
-	height     int
-	noteCount  int
+	screen    screen
+	selected  int
+	action    action
+	problem   string
+	width     int
+	height    int
+	noteCount int
 }
 
 func newModel(ctx context.Context, client Client) model {
-	input := textinput.New()
-	input.Prompt = "> "
-	input.SetWidth(72)
-	editor := textarea.New()
-	editor.Placeholder = "Write your note here..."
-	editor.SetWidth(72)
-	editor.SetHeight(12)
-
-	return model{ctx: ctx, client: client, input: input, editor: editor, notes: newNotesTable(80, 24), width: 80, height: 24}
+	return model{ctx: ctx, client: client, notes: newNotesTable(80, 24), width: 80, height: 24}
 }
 
 func (m model) Init() tea.Cmd { return nil }
@@ -58,9 +56,9 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		m.input.SetWidth(max(20, msg.Width-4))
-		m.editor.SetWidth(max(20, msg.Width-4))
-		m.editor.SetHeight(max(4, msg.Height-7))
+		for index := range m.formInputs {
+			m.formInputs[index].SetWidth(max(20, msg.Width-4))
+		}
 		m.resizeNotesTable()
 		return m, nil
 	case notesResult:
@@ -72,13 +70,37 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.setNotes(msg.notes)
 		m.screen = screenNotes
 		return m, nil
+	case noteOpenResult:
+		return m.openNoteEditor(msg)
+	case noteEditorFinished:
+		return m.finishNoteEdit(msg.err)
+	case noteSaveResult:
+		return m.finishNoteSave(msg)
 	case operationResult:
-		m.screen = screenMenu
 		m.problem = ""
 		if msg.err != nil {
-			m.problem = msg.err.Error()
-		} else {
-			m.status = msg.message
+			m.screen = msg.returnScreen
+			return m, m.notify(msg.err.Error(), notificationError)
+		}
+		m.screen = screenMenu
+		return m, m.notify(msg.message, notificationSuccess)
+	case dismissNotification:
+		if msg.id == m.notification.id {
+			m.notification.text = ""
+		}
+		return m, nil
+	case askAnswer:
+		switch m.action {
+		case actionRebuild:
+			if msg.option != rebuildOption {
+				m.screen = screenMenu
+				return m, nil
+			}
+			m.screen = screenBusy
+			return m, func() tea.Msg {
+				count, err := m.client.RebuildIndex(m.ctx)
+				return operationResult{message: fmt.Sprintf("Indexed %d note(s)", count), err: err}
+			}
 		}
 		return m, nil
 	case tea.KeyPressMsg:
@@ -106,27 +128,18 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				m.problem = ""
 				return m, nil
 			}
-			if msg.String() == "enter" {
-				return m.advance()
-			}
-		case screenCapture:
-			if msg.String() == "esc" {
-				m.screen = screenMenu
-				m.problem = ""
-				return m, nil
-			}
-			if msg.String() == "ctrl+s" {
-				return m.submitCapture()
-			}
-		case screenConfirm:
 			switch msg.String() {
-			case "y", "Y":
-				m.screen = screenBusy
-				return m, func() tea.Msg {
-					count, err := m.client.RebuildIndex(m.ctx)
-					return operationResult{message: fmt.Sprintf("Indexed %d note(s)", count), err: err}
-				}
-			case "n", "N", "esc":
+			case "tab", "down":
+				return m.focusFormField((m.formFocus + 1) % len(m.formInputs))
+			case "shift+tab", "up":
+				return m.focusFormField((m.formFocus - 1 + len(m.formInputs)) % len(m.formInputs))
+			case "enter":
+				return m.submitForm(false)
+			case "ctrl+e":
+				return m.submitForm(true)
+			}
+		case screenAsk:
+			if msg.String() == "esc" || msg.String() == "q" {
 				m.screen = screenMenu
 				return m, nil
 			}
@@ -137,7 +150,10 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				m.screen = screenMenu
 				return m, nil
 			}
-			if msg.String() == "r" {
+			switch msg.String() {
+			case "e", "enter":
+				return m.editSelectedNote()
+			case "r":
 				return m.loadNotes()
 			}
 		}
@@ -146,11 +162,11 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch m.screen {
 	case screenForm:
-		m.input, cmd = m.input.Update(message)
-	case screenCapture:
-		m.editor, cmd = m.editor.Update(message)
+		m.formInputs[m.formFocus], cmd = m.formInputs[m.formFocus].Update(message)
 	case screenNotes:
 		m.notes, cmd = m.notes.Update(message)
+	case screenAsk:
+		m.ask, cmd = m.ask.Update(message)
 	}
 	return m, cmd
 }
@@ -158,32 +174,32 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) begin(selected action) (tea.Model, tea.Cmd) {
 	m.action = selected
 	m.problem = ""
-	m.status = ""
-	m.fieldIndex = 0
-	m.input.Reset()
 	switch selected {
 	case actionCapture:
-		m.screen = screenCapture
-		m.editor.Reset()
-		return m, m.editor.Focus()
+		return m.startCapture()
 	case actionPage:
-		m.fields = []field{{label: "Title", placeholder: "Page title"}, {label: "Area (optional)", placeholder: "project/subarea"}, {label: "Tags (optional, comma-separated)", placeholder: "tag-one, tag-two"}}
+		return m.startForm([]formField{{"Title", "Page title"}, {"Area (optional)", "project/subarea"}, {"Tags (optional, comma-separated)", "tag-one, tag-two"}})
 	case actionBookmark:
-		m.fields = []field{{label: "URL", placeholder: "https://example.com"}, {label: "Tags (optional, comma-separated)", placeholder: "tag-one, tag-two"}}
+		return m.startForm([]formField{{"URL", "https://example.com"}, {"Tags (optional, comma-separated)", "tag-one, tag-two"}})
 	case actionJournal:
-		m.fields = []field{{label: "Tags (optional, comma-separated)", placeholder: "tag-one, tag-two"}}
+		return m.startJournal()
 	case actionRebuild:
-		m.screen = screenConfirm
+		m.ask = newAsk(
+			"Rebuild the index from notes in the vault?",
+			cancelOption,
+			askOption{id: rebuildOption, label: "Yes", icon: "✓", shortcut: "y"},
+			askOption{id: cancelOption, label: "No", icon: "✕", shortcut: "n"},
+		)
+		m.screen = screenAsk
 		return m, nil
 	case actionList:
 		return m.loadNotes()
 	}
-	m.screen = screenForm
-	m.input.Placeholder = m.fields[0].placeholder
-	return m, m.input.Focus()
+	return m, nil
 }
 
 type operationResult struct {
-	message string
-	err     error
+	message      string
+	returnScreen screen
+	err          error
 }

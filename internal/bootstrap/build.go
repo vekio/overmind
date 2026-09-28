@@ -28,11 +28,13 @@ func buildApplication(
 		return nil, nil, err
 	}
 	notesPath := filepath.Join(settings.VaultPath, "notes")
+	noteFiles := localfs.New(notesPath)
 
 	application := app.New(app.Dependencies{
 		IDGenerator: idgenerator.New(),
 		Renderer:    documentRenderer,
-		Writer:      localfs.New(notesPath),
+		Writer:      noteFiles,
+		Reader:      noteFiles,
 		Index:       index,
 		Lister:      index,
 		Walker:      localfs.NewWalker(notesPath),

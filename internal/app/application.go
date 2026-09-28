@@ -14,11 +14,14 @@ type Commands struct {
 	Capture        *CaptureHandler
 	CreateBookmark *CreateBookmarkHandler
 	RebuildIndex   *RebuildIndexHandler
+	UpdateNote     *UpdateNoteHandler
 }
 
 // Queries contains the application's read-only handlers.
 type Queries struct {
-	ListNotes *ListNotesHandler
+	ListNotes   *ListNotesHandler
+	OpenNote    *OpenNoteHandler
+	FindJournal *FindJournalHandler
 }
 
 // New creates the application handlers.
@@ -32,7 +35,12 @@ func New(dependencies Dependencies) *Application {
 			Capture:        newCaptureHandler(saver, dependencies.IDGenerator),
 			CreateBookmark: newCreateBookmarkHandler(saver, dependencies.IDGenerator),
 			RebuildIndex:   newRebuildIndexHandler(dependencies.Walker, dependencies.Parser, dependencies.Index),
+			UpdateNote:     newUpdateNoteHandler(dependencies.Reader, dependencies.Writer, dependencies.Parser, dependencies.Index),
 		},
-		Queries: Queries{ListNotes: newListNotesHandler(dependencies.Lister)},
+		Queries: Queries{
+			ListNotes:   newListNotesHandler(dependencies.Lister),
+			OpenNote:    newOpenNoteHandler(dependencies.Reader),
+			FindJournal: newFindJournalHandler(dependencies.Index),
+		},
 	}
 }

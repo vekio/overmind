@@ -4,6 +4,7 @@ package localfs
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"git.casta.me/alberto/overmind/internal/ports"
@@ -12,6 +13,7 @@ import (
 )
 
 var _ ports.NoteWriter = (*Writer)(nil)
+var _ ports.NoteReader = (*Writer)(nil)
 
 // Writer stores notes in a directory.
 type Writer struct {
@@ -44,4 +46,20 @@ func (writer *Writer) Write(ctx context.Context, id uuid.UUID, content []byte) (
 	}
 
 	return path, nil
+}
+
+// Read returns the source of a note stored under its identifier.
+func (writer *Writer) Read(ctx context.Context, id uuid.UUID) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if id == uuid.Nil() || writer.root == "" {
+		return nil, fmt.Errorf("read note: valid ID and storage root are required")
+	}
+	path := filepath.Join(writer.root, id.String()+".adoc")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read note %q: %w", path, err)
+	}
+	return content, nil
 }

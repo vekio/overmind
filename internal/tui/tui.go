@@ -7,16 +7,20 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"git.casta.me/alberto/overmind/internal/app"
 	"git.casta.me/alberto/overmind/internal/domain"
+	"uuid"
 )
 
 // Client provides the operations available in the terminal interface.
 type Client interface {
-	CreateBookmark(context.Context, domain.URL, domain.Tags) (string, error)
-	Capture(context.Context, string) (string, error)
-	CreateJournal(context.Context, domain.Tags) (string, error)
-	CreatePage(context.Context, domain.Title, domain.Area, domain.Tags) (string, error)
+	CreateBookmark(context.Context, domain.URL, domain.Tags) (app.CreateBookmarkResult, error)
+	Capture(context.Context, string) (app.CaptureResult, error)
+	CreateJournal(context.Context, domain.Tags) (app.CreateJournalResult, error)
+	CreatePage(context.Context, domain.Title, domain.Area, domain.Tags) (app.CreatePageResult, error)
 	RebuildIndex(context.Context) (int, error)
 	ListNotes(context.Context) ([]app.ListedNote, error)
+	FindJournal(context.Context, domain.Date) (uuid.UUID, bool, error)
+	OpenNote(context.Context, uuid.UUID) ([]byte, error)
+	UpdateNote(context.Context, uuid.UUID, []byte, []byte) (app.UpdateNoteResult, error)
 }
 
 // Run opens the terminal interface until the user quits.

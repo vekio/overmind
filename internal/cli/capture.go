@@ -37,11 +37,11 @@ func newCaptureCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			location, err := client.Capture(ctx, text)
+			result, err := client.Capture(ctx, text)
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, location); err != nil {
+			if _, err := fmt.Fprintln(command.Writer, result.Path); err != nil {
 				return fmt.Errorf("write captured note location: %w", err)
 			}
 			return nil

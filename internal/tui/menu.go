@@ -36,9 +36,9 @@ type menuItem struct {
 
 var menuItems = []menuItem{
 	{actionList, "Notes", "Browse indexed notes"},
-	{actionCapture, "Capture", "Save a quick inbox note"},
+	{actionCapture, "Capture", "Create an inbox note and edit it in Neovim"},
 	{actionPage, "Page", "Create a page, optionally inside an area"},
 	{actionBookmark, "Bookmark", "Save a web address"},
-	{actionJournal, "Journal", "Create today's journal note"},
+	{actionJournal, "Journal", "Open today's journal editor"},
 	{actionRebuild, "Rebuild index", "Index the AsciiDoc notes in the vault"},
 }

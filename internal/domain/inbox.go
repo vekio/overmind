@@ -3,7 +3,6 @@ package domain
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 	"uuid"
 )
@@ -19,11 +18,8 @@ type Inbox struct {
 
 func (Inbox) isNote() {}
 
-// NewInbox creates an inbox note from validated content.
+// NewInbox creates an inbox note. Content may be empty until the note is edited.
 func NewInbox(noteID uuid.UUID, content string, createdAt time.Time) (Inbox, error) {
-	if strings.TrimSpace(content) == "" {
-		return Inbox{}, fmt.Errorf("%w: content must not be empty", ErrInvalidInbox)
-	}
 	metadata, err := newMetadata(noteID, NoteKindInbox, Tags{}, createdAt, createdAt)
 	if err != nil {
 		return Inbox{}, fmt.Errorf("%w: %w", ErrInvalidInbox, err)

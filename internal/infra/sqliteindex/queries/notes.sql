@@ -24,6 +24,15 @@ SELECT EXISTS (
       AND note_attributes.value = ?
 );
 
+-- name: JournalID :one
+SELECT notes.id
+FROM notes
+JOIN note_attributes ON note_attributes.note_id = notes.id
+WHERE notes.kind = 'journal'
+  AND note_attributes.name = 'date'
+  AND note_attributes.value = ?
+LIMIT 1;
+
 -- name: DeleteNoteTags :exec
 DELETE FROM note_tags
 WHERE note_id = ?;

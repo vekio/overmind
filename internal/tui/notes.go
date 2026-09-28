@@ -22,11 +22,31 @@ func (m model) loadNotes() (tea.Model, tea.Cmd) {
 	}
 }
 
+func (m model) editSelectedNote() (tea.Model, tea.Cmd) {
+	if len(m.listedNotes) == 0 {
+		return m, nil
+	}
+	index := m.notes.Cursor()
+	if index < 0 || index >= len(m.listedNotes) {
+		m.problem = "selected note is no longer available"
+		return m, nil
+	}
+	id := m.listedNotes[index].ID
+	m.screen = screenBusy
+	return m, func() tea.Msg {
+		source, err := m.client.OpenNote(m.ctx, id)
+		return noteOpenResult{
+			id: id, source: source, returnScreen: screenNotes,
+			unchangedMessage: "Note unchanged", err: err,
+		}
+	}
+}
+
 func newNotesTable(width, height int) table.Model {
 	return table.New(
 		table.WithColumns(noteColumns(width)),
 		table.WithWidth(max(20, width-2)),
-		table.WithHeight(max(4, height-5)),
+		table.WithHeight(notesTableHeight(height, 0)),
 		table.WithFocused(true),
 	)
 }
@@ -43,7 +63,15 @@ func noteColumns(width int) []table.Column {
 func (m *model) resizeNotesTable() {
 	m.notes.SetColumns(noteColumns(m.width))
 	m.notes.SetWidth(max(20, m.width-2))
-	m.notes.SetHeight(max(4, m.height-5))
+	m.notes.SetHeight(notesTableHeight(m.height, m.noteCount))
+}
+
+func notesTableHeight(height, count int) int {
+	reserved := 5
+	if count == 0 {
+		reserved = 7
+	}
+	return max(4, height-reserved)
 }
 
 func (m *model) setNotes(notes []app.ListedNote) {
@@ -56,7 +84,9 @@ func (m *model) setNotes(notes []app.ListedNote) {
 	}
 	m.notes.SetRows(rows)
 	m.notes.Focus()
+	m.listedNotes = notes
 	m.noteCount = len(notes)
+	m.resizeNotesTable()
 }
 
 func noteName(note app.ListedNote) string {
@@ -71,7 +101,7 @@ func noteName(note app.ListedNote) string {
 	case domain.NoteKindJournal:
 		return note.Attributes["date"]
 	case domain.NoteKindInbox:
-		return "Inbox " + note.ID.String()[:8]
+		return "Capture " + note.CreatedAt.Local().Format("2006-01-02 15:04")
 	default:
 		return note.ID.String()
 	}

@@ -53,11 +53,11 @@ func newPageCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			location, err := client.CreatePage(ctx, title, area, tags)
+			result, err := client.CreatePage(ctx, title, area, tags)
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, location); err != nil {
+			if _, err := fmt.Fprintln(command.Writer, result.Path); err != nil {
 				return fmt.Errorf("write created page location: %w", err)
 			}
 			return nil

@@ -1,5 +1,4 @@
 {{ define "inbox" -}}
-= Capture {{ captureTitle .Metadata.CreatedAt }}
 :overmind-id: {{ .Metadata.ID }}
 :overmind-type: {{ .Metadata.Kind }}
 :overmind-created-at: {{ rfc3339 .Metadata.CreatedAt }}

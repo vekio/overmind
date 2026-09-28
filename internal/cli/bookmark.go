@@ -43,11 +43,11 @@ func newBookmarkCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			location, err := client.CreateBookmark(ctx, bookmarkURL, tags)
+			result, err := client.CreateBookmark(ctx, bookmarkURL, tags)
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, location); err != nil {
+			if _, err := fmt.Fprintln(command.Writer, result.Path); err != nil {
 				return fmt.Errorf("write created bookmark location: %w", err)
 			}
 			return nil
