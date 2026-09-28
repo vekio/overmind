@@ -14,6 +14,7 @@ import (
 
 var _ ports.NoteWriter = (*Writer)(nil)
 var _ ports.NoteReader = (*Writer)(nil)
+var _ ports.NoteDeleter = (*Writer)(nil)
 
 // Writer stores notes in a directory.
 type Writer struct {
@@ -62,4 +63,19 @@ func (writer *Writer) Read(ctx context.Context, id uuid.UUID) ([]byte, error) {
 		return nil, fmt.Errorf("read note %q: %w", path, err)
 	}
 	return content, nil
+}
+
+// Delete removes a note document. A missing file is already deleted.
+func (writer *Writer) Delete(ctx context.Context, id uuid.UUID) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if id == uuid.Nil() || writer.root == "" {
+		return fmt.Errorf("delete note: valid ID and storage root are required")
+	}
+	path := filepath.Join(writer.root, id.String()+".adoc")
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("delete note %q: %w", path, err)
+	}
+	return nil
 }

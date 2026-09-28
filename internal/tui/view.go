@@ -54,7 +54,7 @@ func (m model) View() tea.View {
 		if m.noteCount == 0 {
 			content += "\n\nNo notes indexed yet. Create one or rebuild the index."
 		}
-		controls = []controlHint{{"↑/↓", "move"}, {"enter/e", "edit"}, {"r", "refresh"}, {"esc/q", "back"}}
+		controls = []controlHint{{"↑/↓", "move"}, {"enter/e", "edit"}, {"d", "delete"}, {"r", "refresh"}, {"esc/q", "back"}}
 	}
 	if m.problem != "" {
 		content += "\n\nError: " + m.problem

@@ -9,6 +9,16 @@ import (
 	"context"
 )
 
+const deleteNote = `-- name: DeleteNote :exec
+DELETE FROM notes
+WHERE id = ?
+`
+
+func (q *Queries) DeleteNote(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteNote, id)
+	return err
+}
+
 const deleteNoteAttributes = `-- name: DeleteNoteAttributes :exec
 DELETE FROM note_attributes
 WHERE note_id = ?

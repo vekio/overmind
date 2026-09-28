@@ -10,6 +10,10 @@ ON CONFLICT(id) DO UPDATE SET
 DELETE FROM note_attributes
 WHERE note_id = ?;
 
+-- name: DeleteNote :exec
+DELETE FROM notes
+WHERE id = ?;
+
 -- name: InsertNoteAttribute :exec
 INSERT INTO note_attributes (note_id, name, value)
 VALUES (?, ?, ?);

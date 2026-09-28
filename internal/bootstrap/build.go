@@ -35,6 +35,7 @@ func buildApplication(
 		Renderer:    documentRenderer,
 		Writer:      noteFiles,
 		Reader:      noteFiles,
+		Deleter:     noteFiles,
 		Index:       index,
 		Lister:      index,
 		Walker:      localfs.NewWalker(notesPath),

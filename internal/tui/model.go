@@ -8,6 +8,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"git.casta.me/alberto/overmind/internal/app"
+	"uuid"
 )
 
 type screen uint8
@@ -15,6 +16,7 @@ type screen uint8
 const (
 	rebuildOption askOptionID = "rebuild"
 	cancelOption  askOptionID = "cancel"
+	deleteOption  askOptionID = "delete"
 )
 
 const (
@@ -36,6 +38,7 @@ type model struct {
 	notification notification
 	noteEditor   noteEditorState
 	listedNotes  []app.ListedNote
+	deleteNoteID uuid.UUID
 
 	screen    screen
 	selected  int
@@ -70,6 +73,15 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.setNotes(msg.notes)
 		m.screen = screenNotes
 		return m, nil
+	case noteDeleteResult:
+		m.deleteNoteID = uuid.Nil()
+		if msg.err != nil {
+			m.screen = screenNotes
+			return m, m.notify(msg.err.Error(), notificationError)
+		}
+		next, cmd := m.loadNotes()
+		m = next.(model)
+		return m, tea.Batch(cmd, m.notify("Note deleted", notificationSuccess))
 	case noteOpenResult:
 		return m.openNoteEditor(msg)
 	case noteEditorFinished:
@@ -90,6 +102,18 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case askAnswer:
+		if m.deleteNoteID != uuid.Nil() {
+			id := m.deleteNoteID
+			m.deleteNoteID = uuid.Nil()
+			if msg.option != deleteOption {
+				m.screen = screenNotes
+				return m, nil
+			}
+			m.screen = screenBusy
+			return m, func() tea.Msg {
+				return noteDeleteResult{err: m.client.DeleteNote(m.ctx, id)}
+			}
+		}
 		switch m.action {
 		case actionRebuild:
 			if msg.option != rebuildOption {
@@ -140,7 +164,12 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case screenAsk:
 			if msg.String() == "esc" || msg.String() == "q" {
-				m.screen = screenMenu
+				if m.deleteNoteID != uuid.Nil() {
+					m.deleteNoteID = uuid.Nil()
+					m.screen = screenNotes
+				} else {
+					m.screen = screenMenu
+				}
 				return m, nil
 			}
 		case screenBusy:
@@ -155,6 +184,8 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				return m.editSelectedNote()
 			case "r":
 				return m.loadNotes()
+			case "d":
+				return m.confirmDeleteSelectedNote()
 			}
 		}
 	}

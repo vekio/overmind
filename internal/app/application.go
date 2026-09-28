@@ -15,6 +15,7 @@ type Commands struct {
 	CreateBookmark *CreateBookmarkHandler
 	RebuildIndex   *RebuildIndexHandler
 	UpdateNote     *UpdateNoteHandler
+	DeleteNote     *DeleteNoteHandler
 }
 
 // Queries contains the application's read-only handlers.
@@ -36,6 +37,7 @@ func New(dependencies Dependencies) *Application {
 			CreateBookmark: newCreateBookmarkHandler(saver, dependencies.IDGenerator),
 			RebuildIndex:   newRebuildIndexHandler(dependencies.Walker, dependencies.Parser, dependencies.Index),
 			UpdateNote:     newUpdateNoteHandler(dependencies.Reader, dependencies.Writer, dependencies.Parser, dependencies.Index),
+			DeleteNote:     newDeleteNoteHandler(dependencies.Deleter, dependencies.Index),
 		},
 		Queries: Queries{
 			ListNotes:   newListNotesHandler(dependencies.Lister),

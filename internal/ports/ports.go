@@ -29,10 +29,16 @@ type NoteReader interface {
 	Read(context.Context, uuid.UUID) ([]byte, error)
 }
 
+// NoteDeleter removes a note document by its identifier.
+type NoteDeleter interface {
+	Delete(context.Context, uuid.UUID) error
+}
+
 // NoteIndex indexes note metadata.
 type NoteIndex interface {
 	Upsert(context.Context, domain.Note) error
 	UpsertRecord(context.Context, IndexRecord) error
+	Delete(context.Context, uuid.UUID) error
 	JournalExists(context.Context, domain.Date) (bool, error)
 	JournalID(context.Context, domain.Date) (uuid.UUID, bool, error)
 	ReplaceAll(context.Context, []IndexRecord) error

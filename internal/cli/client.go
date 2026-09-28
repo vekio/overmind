@@ -19,6 +19,7 @@ type Client interface {
 	FindJournal(context.Context, domain.Date) (uuid.UUID, bool, error)
 	OpenNote(context.Context, uuid.UUID) ([]byte, error)
 	UpdateNote(context.Context, uuid.UUID, []byte, []byte) (app.UpdateNoteResult, error)
+	DeleteNote(context.Context, uuid.UUID) error
 }
 
 // ClientFactory creates the client after command flags have been parsed.
@@ -70,4 +71,8 @@ func (client *LocalClient) OpenNote(ctx context.Context, id uuid.UUID) ([]byte, 
 
 func (client *LocalClient) UpdateNote(ctx context.Context, id uuid.UUID, original, source []byte) (app.UpdateNoteResult, error) {
 	return client.application.Commands.UpdateNote.Handle(ctx, app.UpdateNoteCommand{ID: id, Original: original, Source: source})
+}
+
+func (client *LocalClient) DeleteNote(ctx context.Context, id uuid.UUID) error {
+	return client.application.Commands.DeleteNote.Handle(ctx, id)
 }

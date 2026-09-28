@@ -154,6 +154,14 @@ func (store *Store) UpsertRecord(ctx context.Context, record ports.IndexRecord) 
 	return nil
 }
 
+// Delete removes a note and its attributes and tags from the index.
+func (store *Store) Delete(ctx context.Context, id uuid.UUID) error {
+	if err := store.queries.DeleteNote(ctx, id.String()); err != nil {
+		return fmt.Errorf("delete indexed note %s: %w", id, err)
+	}
+	return nil
+}
+
 // JournalExists reports whether a journal is indexed for date.
 func (store *Store) JournalExists(ctx context.Context, date domain.Date) (bool, error) {
 	exists, err := store.queries.JournalExists(ctx, date.String())

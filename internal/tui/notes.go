@@ -14,6 +14,10 @@ type notesResult struct {
 	err   error
 }
 
+type noteDeleteResult struct {
+	err error
+}
+
 func (m model) loadNotes() (tea.Model, tea.Cmd) {
 	m.screen = screenBusy
 	return m, func() tea.Msg {
@@ -40,6 +44,27 @@ func (m model) editSelectedNote() (tea.Model, tea.Cmd) {
 			unchangedMessage: "Note unchanged", err: err,
 		}
 	}
+}
+
+func (m model) confirmDeleteSelectedNote() (tea.Model, tea.Cmd) {
+	if len(m.listedNotes) == 0 {
+		return m, nil
+	}
+	index := m.notes.Cursor()
+	if index < 0 || index >= len(m.listedNotes) {
+		m.problem = "selected note is no longer available"
+		return m, nil
+	}
+	note := m.listedNotes[index]
+	m.deleteNoteID = note.ID
+	m.ask = newAsk(
+		"Delete "+noteName(note)+" from the vault?",
+		cancelOption,
+		askOption{id: deleteOption, label: "Yes", icon: "✓", shortcut: "y"},
+		askOption{id: cancelOption, label: "No", icon: "✕", shortcut: "n"},
+	)
+	m.screen = screenAsk
+	return m, nil
 }
 
 func newNotesTable(width, height int) table.Model {

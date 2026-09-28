@@ -21,6 +21,7 @@ type Client interface {
 	FindJournal(context.Context, domain.Date) (uuid.UUID, bool, error)
 	OpenNote(context.Context, uuid.UUID) ([]byte, error)
 	UpdateNote(context.Context, uuid.UUID, []byte, []byte) (app.UpdateNoteResult, error)
+	DeleteNote(context.Context, uuid.UUID) error
 }
 
 // Run opens the terminal interface until the user quits.
