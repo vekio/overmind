@@ -5,13 +5,13 @@ import (
 	"io"
 	"path/filepath"
 
-	"git.casta.me/alberto/overmind/internal/app"
-	appconfig "git.casta.me/alberto/overmind/internal/config"
-	"git.casta.me/alberto/overmind/internal/infra/asciidocnote"
-	"git.casta.me/alberto/overmind/internal/infra/idgenerator"
-	"git.casta.me/alberto/overmind/internal/infra/localfs"
-	"git.casta.me/alberto/overmind/internal/infra/renderer"
-	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
+	"github.com/vekio/overmind/internal/app"
+	appconfig "github.com/vekio/overmind/internal/config"
+	"github.com/vekio/overmind/internal/infra/asciidocnote"
+	"github.com/vekio/overmind/internal/infra/idgenerator"
+	"github.com/vekio/overmind/internal/infra/localfs"
+	"github.com/vekio/overmind/internal/infra/renderer"
+	"github.com/vekio/overmind/internal/infra/sqliteindex"
 )
 
 func buildApplication(

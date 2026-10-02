@@ -3,8 +3,8 @@ package parser
 import (
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
 )
 
 func (p *Parser) parseSectionHeading(openSections []*ast.Section, metadata ast.BlockMetadata) *ast.Section {

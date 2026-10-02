@@ -5,8 +5,8 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 func (m model) startJournal() (tea.Model, tea.Cmd) {

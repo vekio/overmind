@@ -5,8 +5,8 @@ import (
 	"io"
 	"sort"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
 )
 
 // ProcessResult contains the syntax tree, semantic analysis, and diagnostics

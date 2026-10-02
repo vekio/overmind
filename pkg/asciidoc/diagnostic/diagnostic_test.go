@@ -3,7 +3,7 @@ package diagnostic
 import (
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 func TestSeverityAndDiagnosticString(t *testing.T) {

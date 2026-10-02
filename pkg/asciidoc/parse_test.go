@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 func TestParseFacade(t *testing.T) {

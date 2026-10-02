@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 func TestPersonCreationEditingAndRebuild(t *testing.T) {

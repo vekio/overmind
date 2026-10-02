@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 // ErrJournalAlreadyExists indicates that a journal exists for a date.

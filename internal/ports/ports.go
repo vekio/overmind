@@ -6,7 +6,7 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 // IDGenerator generates note identifiers.

@@ -1,6 +1,6 @@
 package format
 
-import "git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+import "github.com/vekio/overmind/pkg/asciidoc/ast"
 
 func makeJSONSpan(span ast.Span) jsonSpan {
 	return jsonSpan{Start: makeJSONPosition(span.Start), End: makeJSONPosition(span.End)}

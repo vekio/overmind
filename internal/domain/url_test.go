@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"git.casta.me/alberto/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 func TestURLRequiresHTTPOrHTTPS(t *testing.T) {

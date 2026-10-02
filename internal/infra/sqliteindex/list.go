@@ -7,9 +7,9 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/infra/sqliteindex/sqlitedb"
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/infra/sqliteindex/sqlitedb"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 var _ ports.NoteLister = (*Store)(nil)

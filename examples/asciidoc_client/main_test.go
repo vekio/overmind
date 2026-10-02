@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/edit"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/edit"
 )
 
 func TestEditorUsesTheHighLevelEditingAPI(t *testing.T) {

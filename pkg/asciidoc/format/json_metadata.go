@@ -1,6 +1,6 @@
 package format
 
-import "git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+import "github.com/vekio/overmind/pkg/asciidoc/ast"
 
 func makeJSONBlockMetadata(metadata ast.BlockMetadata) jsonBlockMetadata {
 	result := jsonBlockMetadata{AttributeLists: make([]jsonAttributeList, 0, len(metadata.AttributeLists))}

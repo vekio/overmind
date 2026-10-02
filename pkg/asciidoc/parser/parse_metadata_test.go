@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 func TestParseDelimitedBlocksWithMetadataAndExactContent(t *testing.T) {

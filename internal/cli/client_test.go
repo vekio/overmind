@@ -8,9 +8,9 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/domain"
 	urfavecli "github.com/urfave/cli/v3"
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 type otherCommandsClient struct {

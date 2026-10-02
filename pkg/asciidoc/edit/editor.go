@@ -3,7 +3,7 @@ package edit
 import (
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc"
 )
 
 // Editor applies source-preserving semantic edits to an AsciiDoc document.

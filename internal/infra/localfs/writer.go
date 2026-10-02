@@ -7,9 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"git.casta.me/alberto/overmind/internal/ports"
-	"github.com/vekio/x/file"
 	"uuid"
+
+	"github.com/vekio/overmind/internal/ports"
+	"github.com/vekio/x/file"
 )
 
 var _ ports.NoteWriter = (*Writer)(nil)

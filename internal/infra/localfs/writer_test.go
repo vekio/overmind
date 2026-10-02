@@ -8,7 +8,7 @@ import (
 	"testing"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/infra/localfs"
+	"github.com/vekio/overmind/internal/infra/localfs"
 )
 
 func TestWriterRoundTripAndDeleteMissingFile(t *testing.T) {

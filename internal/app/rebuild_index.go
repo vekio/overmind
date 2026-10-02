@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 // RebuildIndexResult reports how many notes were indexed.

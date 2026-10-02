@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/format"
 	urfavecli "github.com/urfave/cli/v3"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/format"
 )
 
 func newParserCommand() *urfavecli.Command {

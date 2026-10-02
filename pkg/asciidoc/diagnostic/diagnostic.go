@@ -5,7 +5,7 @@ package diagnostic
 import (
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 // Severity identifies the impact of a diagnostic.

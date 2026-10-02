@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"uuid"
+
 	"charm.land/bubbles/v2/table"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"git.casta.me/alberto/overmind/internal/app"
-	"uuid"
+	"github.com/vekio/overmind/internal/app"
 )
 
 type screen uint8

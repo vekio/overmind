@@ -3,7 +3,7 @@ package parser
 import (
 	"strings"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 // inlineParser parses constrained formatting directly from original source

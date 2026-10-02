@@ -3,9 +3,10 @@ package cli
 import (
 	"context"
 
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/domain"
 	"uuid"
+
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 // Client provides the note operations used by the CLI.

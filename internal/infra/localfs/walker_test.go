@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	"git.casta.me/alberto/overmind/internal/infra/localfs"
+	"github.com/vekio/overmind/internal/infra/localfs"
 )
 
 func TestWalkerVisitsOnlyAsciiDocFilesAndHonorsCancellation(t *testing.T) {

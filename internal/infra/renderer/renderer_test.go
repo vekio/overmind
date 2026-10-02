@@ -7,9 +7,9 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/infra/asciidocnote"
-	"git.casta.me/alberto/overmind/internal/infra/renderer"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/infra/asciidocnote"
+	"github.com/vekio/overmind/internal/infra/renderer"
 )
 
 func TestEmptyInboxTemplateCanBeParsedForEditing(t *testing.T) {

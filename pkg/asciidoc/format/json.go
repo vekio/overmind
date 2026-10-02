@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc"
 )
 
 // WriteJSON writes a syntax parser result as indented JSON followed by a

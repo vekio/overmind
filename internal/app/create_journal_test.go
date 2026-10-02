@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 type existingJournalIndex struct{ ports.NoteIndex }

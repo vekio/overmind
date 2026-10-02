@@ -14,10 +14,10 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/infra/sqliteindex/sqlitedb"
-	"git.casta.me/alberto/overmind/internal/ports"
 	"github.com/pressly/goose/v3"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/infra/sqliteindex/sqlitedb"
+	"github.com/vekio/overmind/internal/ports"
 	_ "modernc.org/sqlite"
 )
 

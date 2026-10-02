@@ -5,8 +5,8 @@ import (
 	"testing"
 	"testing/iotest"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
 )
 
 func TestProcessReturnsASTAnalysisAndCombinedDiagnostics(t *testing.T) {

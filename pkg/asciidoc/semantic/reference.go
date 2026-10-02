@@ -3,8 +3,8 @@ package semantic
 import (
 	"strings"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
 )
 
 // ReferenceStatus describes the result of resolving a cross-reference.

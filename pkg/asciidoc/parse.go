@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/parser"
+	"github.com/vekio/overmind/pkg/asciidoc/parser"
 )
 
 // Result contains the partial or complete AST and all parser diagnostics.

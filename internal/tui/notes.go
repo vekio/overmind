@@ -5,8 +5,8 @@ import (
 
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 type notesResult struct {

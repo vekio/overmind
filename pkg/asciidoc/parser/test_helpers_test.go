@@ -5,8 +5,8 @@ import (
 	"io"
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	parserpkg "git.casta.me/alberto/overmind/pkg/asciidoc/parser"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	parserpkg "github.com/vekio/overmind/pkg/asciidoc/parser"
 )
 
 func parse(source []byte) parserpkg.Result {

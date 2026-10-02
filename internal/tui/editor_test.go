@@ -9,7 +9,7 @@ import (
 	"testing"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app"
 )
 
 type editorClient struct {

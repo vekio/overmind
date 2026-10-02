@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/semantic"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/semantic"
 )
 
 func TestAnalyzeIndexesAnchorsAndResolvesForwardInternalReferences(t *testing.T) {

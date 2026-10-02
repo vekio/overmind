@@ -1,8 +1,8 @@
 package asciidoc
 
 import (
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/semantic"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/semantic"
 )
 
 // Analysis is the public semantic result produced by Analyze.

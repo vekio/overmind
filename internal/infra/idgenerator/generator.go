@@ -2,8 +2,9 @@
 package idgenerator
 
 import (
-	"git.casta.me/alberto/overmind/internal/ports"
 	"uuid"
+
+	"github.com/vekio/overmind/internal/ports"
 )
 
 var _ ports.IDGenerator = Generator{}

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 func (p *inlineParser) span(start, end int) ast.Span {

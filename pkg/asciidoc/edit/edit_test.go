@@ -3,8 +3,8 @@ package edit_test
 import (
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/edit"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/edit"
 )
 
 func TestApplyInsertionReplacementAndDeletion(t *testing.T) {

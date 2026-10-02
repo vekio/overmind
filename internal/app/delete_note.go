@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 // DeleteNoteHandler removes a note document and its indexed metadata.

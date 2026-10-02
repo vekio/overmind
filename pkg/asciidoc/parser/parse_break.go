@@ -1,6 +1,6 @@
 package parser
 
-import "git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+import "github.com/vekio/overmind/pkg/asciidoc/ast"
 
 func (p *Parser) parseThematicBreak() *ast.ThematicBreak {
 	result := &ast.ThematicBreak{Source: tokenSpan(p.current)}

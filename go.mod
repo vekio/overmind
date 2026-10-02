@@ -1,4 +1,4 @@
-module git.casta.me/alberto/overmind
+module github.com/vekio/overmind
 
 go 1.27.0
 

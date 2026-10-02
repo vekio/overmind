@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/edit"
+	"github.com/vekio/overmind/pkg/asciidoc/edit"
 )
 
 func TestEditorSetHeaderAttributeReplacesEffectiveDeclaration(t *testing.T) {

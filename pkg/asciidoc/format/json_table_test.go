@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/format"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/format"
 )
 
 func TestWriteJSONSerializesTableRowsCellsAndInlines(t *testing.T) {

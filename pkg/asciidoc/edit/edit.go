@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sort"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 // TextEdit replaces the half-open Source range with Replacement. An empty

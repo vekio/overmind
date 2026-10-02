@@ -6,9 +6,9 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/infra/sqliteindex"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 func TestReplaceAllRollsBackOnDuplicateJournalDate(t *testing.T) {

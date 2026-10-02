@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"uuid"
+
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"git.casta.me/alberto/overmind/internal/domain"
-	"uuid"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 type formField struct {

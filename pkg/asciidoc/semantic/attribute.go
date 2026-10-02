@@ -3,7 +3,7 @@ package semantic
 import (
 	"sort"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 // Attribute is one header attribute declaration. Operation distinguishes an

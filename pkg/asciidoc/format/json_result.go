@@ -3,7 +3,7 @@ package format
 import (
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc"
 )
 
 func makeJSONResult(result asciidoc.Result) (jsonResult, error) {

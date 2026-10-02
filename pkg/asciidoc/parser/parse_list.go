@@ -3,9 +3,9 @@ package parser
 import (
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/lexer"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/lexer"
 )
 
 func (p *Parser) parseList(metadata ast.BlockMetadata) *ast.List {

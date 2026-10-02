@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/semantic"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/semantic"
 )
 
 func TestAnalyzeBuildsEffectiveHeaderAttributesAndHistory(t *testing.T) {

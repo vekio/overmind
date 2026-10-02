@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.casta.me/alberto/overmind/internal/config"
+	"github.com/vekio/overmind/internal/config"
 )
 
 func TestSettingsValidateLocalModeAndVault(t *testing.T) {

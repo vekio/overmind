@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/iotest"
 
-	parserpkg "git.casta.me/alberto/overmind/pkg/asciidoc/parser"
+	parserpkg "github.com/vekio/overmind/pkg/asciidoc/parser"
 )
 
 func TestParseReaderReturnsPartialDocumentAndReadDiagnostic(t *testing.T) {

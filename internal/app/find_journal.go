@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 // FindJournalHandler finds the journal for a date without creating it.

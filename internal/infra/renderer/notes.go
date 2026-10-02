@@ -3,7 +3,7 @@ package renderer
 import (
 	"fmt"
 
-	"git.casta.me/alberto/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 const (

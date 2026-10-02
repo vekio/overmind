@@ -8,11 +8,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"git.casta.me/alberto/overmind/internal/bootstrap"
-	"git.casta.me/alberto/overmind/internal/cli"
-	appconfig "git.casta.me/alberto/overmind/internal/config"
 	urfavecli "github.com/urfave/cli/v3"
 	configlib "github.com/vekio/config"
+	"github.com/vekio/overmind/internal/bootstrap"
+	"github.com/vekio/overmind/internal/cli"
+	appconfig "github.com/vekio/overmind/internal/config"
 )
 
 func main() {

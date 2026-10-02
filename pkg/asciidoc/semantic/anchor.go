@@ -3,8 +3,8 @@ package semantic
 import (
 	"sort"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
 )
 
 // Anchor associates an explicit AsciiDoc anchor with the AST node to which

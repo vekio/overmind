@@ -7,11 +7,11 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/ports"
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/semantic"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/ports"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/semantic"
 )
 
 var _ ports.NoteParser = Parser{}

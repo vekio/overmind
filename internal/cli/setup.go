@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"charm.land/huh/v2"
-	appconfig "git.casta.me/alberto/overmind/internal/config"
 	urfavecli "github.com/urfave/cli/v3"
 	configlib "github.com/vekio/config"
+	appconfig "github.com/vekio/overmind/internal/config"
 )
 
 type vaultPrompt func(context.Context, string) (string, error)

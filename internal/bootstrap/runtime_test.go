@@ -9,7 +9,7 @@ import (
 	"slices"
 	"testing"
 
-	appconfig "git.casta.me/alberto/overmind/internal/config"
+	appconfig "github.com/vekio/overmind/internal/config"
 )
 
 type recordingCloser struct {

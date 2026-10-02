@@ -4,10 +4,11 @@ package tui
 import (
 	"context"
 
-	tea "charm.land/bubbletea/v2"
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/domain"
 	"uuid"
+
+	tea "charm.land/bubbletea/v2"
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 // Client provides the operations available in the terminal interface.

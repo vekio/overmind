@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"git.casta.me/alberto/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 func TestTagsRejectDuplicatesAndProtectItems(t *testing.T) {

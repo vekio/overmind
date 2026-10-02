@@ -8,11 +8,11 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/app"
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/infra/localfs"
-	"git.casta.me/alberto/overmind/internal/infra/sqliteindex"
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/infra/localfs"
+	"github.com/vekio/overmind/internal/infra/sqliteindex"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 func TestDeleteNoteRemovesFileAndIndexedMetadata(t *testing.T) {

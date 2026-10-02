@@ -3,7 +3,7 @@ package format
 import (
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 func makeJSONBlocks(blocks []ast.Block) ([]any, error) {

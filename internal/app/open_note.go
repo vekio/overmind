@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 // OpenNoteHandler reads an existing note without changing it.

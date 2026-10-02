@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/infra/asciidocnote"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/infra/asciidocnote"
 )
 
 const pageSource = `= A page

@@ -1,6 +1,6 @@
 package parser
 
-import "git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+import "github.com/vekio/overmind/pkg/asciidoc/ast"
 
 func (p *Parser) parseBlockMacro(metadata ast.BlockMetadata) *ast.BlockMacro {
 	token := p.current

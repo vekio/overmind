@@ -1,6 +1,6 @@
 package app
 
-import "git.casta.me/alberto/overmind/internal/ports"
+import "github.com/vekio/overmind/internal/ports"
 
 // Dependencies contains the ports required by the application.
 type Dependencies struct {

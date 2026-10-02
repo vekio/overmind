@@ -5,9 +5,9 @@ import (
 	"io"
 	"unicode/utf8"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/lexer"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/lexer"
 )
 
 // Parser coordinates the line lexer and construction-specific parsers. A

@@ -2,7 +2,7 @@ package cli
 
 import "runtime/debug"
 
-// Version can be set with -ldflags "-X git.casta.me/alberto/overmind/internal/cli.Version=vX.Y.Z".
+// Version can be set with -ldflags "-X github.com/vekio/overmind/internal/cli.Version=vX.Y.Z".
 var Version string
 
 func buildVersion() string {

@@ -3,8 +3,8 @@ package parser_test
 import (
 	"testing"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
-	parserpkg "git.casta.me/alberto/overmind/pkg/asciidoc/parser"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
+	parserpkg "github.com/vekio/overmind/pkg/asciidoc/parser"
 )
 
 func TestResultHasErrors(t *testing.T) {

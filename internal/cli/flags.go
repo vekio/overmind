@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"git.casta.me/alberto/overmind/internal/domain"
 	urfavecli "github.com/urfave/cli/v3"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 func areaFlag(usage string) urfavecli.Flag {

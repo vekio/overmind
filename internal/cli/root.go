@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 
-	appconfig "git.casta.me/alberto/overmind/internal/config"
-	"git.casta.me/alberto/overmind/internal/tui"
 	urfavecli "github.com/urfave/cli/v3"
 	configlib "github.com/vekio/config"
 	configurfave "github.com/vekio/config/urfave"
+	appconfig "github.com/vekio/overmind/internal/config"
+	"github.com/vekio/overmind/internal/tui"
 )
 
 func New(configFile *configlib.ConfigFile[appconfig.Settings], newClient ClientFactory) *urfavecli.Command {

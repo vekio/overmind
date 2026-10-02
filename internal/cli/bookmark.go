@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"git.casta.me/alberto/overmind/internal/domain"
 	urfavecli "github.com/urfave/cli/v3"
+	"github.com/vekio/overmind/internal/domain"
 )
 
 func newBookmarkCommand(newClient ClientFactory) *urfavecli.Command {

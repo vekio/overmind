@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 var _ ports.NoteWalker = (*Walker)(nil)

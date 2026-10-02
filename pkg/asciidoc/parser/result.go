@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/diagnostic"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/diagnostic"
 )
 
 // Result contains the partial or complete AST and every diagnostic produced

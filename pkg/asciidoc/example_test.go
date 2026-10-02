@@ -3,8 +3,8 @@ package asciidoc_test
 import (
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
 )
 
 func ExampleProcess() {

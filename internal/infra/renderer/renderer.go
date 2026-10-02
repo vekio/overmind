@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"text/template"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 var _ ports.NoteRenderer = (*Renderer)(nil)

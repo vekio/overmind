@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/lexer"
 	urfavecli "github.com/urfave/cli/v3"
+	"github.com/vekio/overmind/pkg/asciidoc/lexer"
 )
 
 func newLexerCommand() *urfavecli.Command {

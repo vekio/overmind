@@ -7,8 +7,8 @@ import (
 	"time"
 	"uuid"
 
-	"git.casta.me/alberto/overmind/internal/domain"
-	"git.casta.me/alberto/overmind/internal/ports"
+	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 func TestListReturnsIndexedMetadataNewestFirst(t *testing.T) {

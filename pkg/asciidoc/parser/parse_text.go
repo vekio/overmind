@@ -3,8 +3,8 @@ package parser
 import (
 	"strings"
 
-	"git.casta.me/alberto/overmind/pkg/asciidoc/ast"
-	"git.casta.me/alberto/overmind/pkg/asciidoc/lexer"
+	"github.com/vekio/overmind/pkg/asciidoc/ast"
+	"github.com/vekio/overmind/pkg/asciidoc/lexer"
 )
 
 func (p *Parser) parseTextContinuation(initial string, source ast.Span, ending lexer.LineEnding) (string, []ast.Inline, ast.Span) {

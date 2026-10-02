@@ -8,9 +8,9 @@ import (
 	"io"
 	"slices"
 
-	"git.casta.me/alberto/overmind/internal/app"
-	appconfig "git.casta.me/alberto/overmind/internal/config"
 	configlib "github.com/vekio/config"
+	"github.com/vekio/overmind/internal/app"
+	appconfig "github.com/vekio/overmind/internal/config"
 )
 
 // Runtime loads and owns the configured application services.
