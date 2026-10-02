@@ -13,6 +13,7 @@ type Client interface {
 	CreateBookmark(context.Context, domain.URL, domain.Tags) (app.CreateBookmarkResult, error)
 	Capture(context.Context, string) (app.CaptureResult, error)
 	CreateJournal(context.Context, domain.Tags) (app.CreateJournalResult, error)
+	CreatePerson(context.Context, domain.Title, domain.Groups, domain.Tags) (app.CreatePersonResult, error)
 	CreatePage(context.Context, domain.Title, domain.Area, domain.Tags) (app.CreatePageResult, error)
 	RebuildIndex(context.Context) (int, error)
 	ListNotes(context.Context) ([]app.ListedNote, error)
@@ -75,4 +76,8 @@ func (client *LocalClient) UpdateNote(ctx context.Context, id uuid.UUID, origina
 
 func (client *LocalClient) DeleteNote(ctx context.Context, id uuid.UUID) error {
 	return client.application.Commands.DeleteNote.Handle(ctx, id)
+}
+
+func (client *LocalClient) CreatePerson(ctx context.Context, name domain.Title, groups domain.Groups, tags domain.Tags) (app.CreatePersonResult, error) {
+	return client.application.Commands.CreatePerson.Handle(ctx, app.CreatePersonCommand{Name: name, Groups: groups, Tags: tags})
 }

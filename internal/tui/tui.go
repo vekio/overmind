@@ -15,6 +15,7 @@ type Client interface {
 	CreateBookmark(context.Context, domain.URL, domain.Tags) (app.CreateBookmarkResult, error)
 	Capture(context.Context, string) (app.CaptureResult, error)
 	CreateJournal(context.Context, domain.Tags) (app.CreateJournalResult, error)
+	CreatePerson(context.Context, domain.Title, domain.Groups, domain.Tags) (app.CreatePersonResult, error)
 	CreatePage(context.Context, domain.Title, domain.Area, domain.Tags) (app.CreatePageResult, error)
 	RebuildIndex(context.Context) (int, error)
 	ListNotes(context.Context) ([]app.ListedNote, error)

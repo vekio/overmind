@@ -10,6 +10,7 @@ type Application struct {
 // Commands contains the application's state-changing handlers.
 type Commands struct {
 	CreatePage     *CreatePageHandler
+	CreatePerson   *CreatePersonHandler
 	CreateJournal  *CreateJournalHandler
 	Capture        *CaptureHandler
 	CreateBookmark *CreateBookmarkHandler
@@ -32,6 +33,7 @@ func New(dependencies Dependencies) *Application {
 	return &Application{
 		Commands: Commands{
 			CreatePage:     newCreatePageHandler(saver, dependencies.IDGenerator),
+			CreatePerson:   newCreatePersonHandler(saver, dependencies.IDGenerator),
 			CreateJournal:  newCreateJournalHandler(saver, dependencies.Index, dependencies.IDGenerator),
 			Capture:        newCaptureHandler(saver, dependencies.IDGenerator),
 			CreateBookmark: newCreateBookmarkHandler(saver, dependencies.IDGenerator),

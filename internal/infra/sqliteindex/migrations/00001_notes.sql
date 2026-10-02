@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE notes (
     id TEXT PRIMARY KEY NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('page', 'journal', 'inbox', 'bookmark')),
+    kind TEXT NOT NULL CHECK (kind IN ('page', 'journal', 'inbox', 'bookmark', 'person')),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );

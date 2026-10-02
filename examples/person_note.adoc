@@ -1,0 +1,24 @@
+= Ana García
+:overmind-id: 33333333-3333-4333-8333-333333333333
+:overmind-type: person
+:overmind-groups: trabajo, universidad
+:overmind-tags: amiga
+:overmind-created-at: 2026-10-02T10:00:00Z
+:overmind-updated-at: 2026-10-02T10:00:00Z
+
+// Create a similar note with:
+// overmind person --group trabajo --group universidad --tag amiga "Ana García"
+// Groups are optional, normalized names shared by people, such as work or university.
+// Edit overmind-groups to change membership; separate multiple groups with commas.
+
+== Contact
+
+Email:: ana@example.com
+
+== Context
+
+Compañera de universidad. Ahora trabajamos en el mismo equipo.
+
+== Notes
+
+Le interesa el desarrollo de software y el senderismo.

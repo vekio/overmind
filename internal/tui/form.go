@@ -59,6 +59,34 @@ func (m model) submitForm(edit bool) (tea.Model, tea.Cmd) {
 	var create func() (uuid.UUID, string, error)
 	var createdMessage string
 	switch m.action {
+	case actionPerson:
+		name, err := domain.NewTitle(m.formInputs[0].Value())
+		if err != nil {
+			return m.formError(0, err)
+		}
+		var values []domain.Group
+		if value := m.formInputs[1].Value(); strings.TrimSpace(value) != "" {
+			for _, part := range strings.Split(value, ",") {
+				group, err := domain.NewGroup(part)
+				if err != nil {
+					return m.formError(1, err)
+				}
+				values = append(values, group)
+			}
+		}
+		groups, err := domain.NewGroups(values...)
+		if err != nil {
+			return m.formError(1, err)
+		}
+		tags, err := parseTags(m.formInputs[2].Value())
+		if err != nil {
+			return m.formError(2, err)
+		}
+		create = func() (uuid.UUID, string, error) {
+			result, err := m.client.CreatePerson(m.ctx, name, groups, tags)
+			return result.Person.Metadata().ID(), result.Path, err
+		}
+		createdMessage = "Person created"
 	case actionPage:
 		title, err := domain.NewTitle(strings.TrimSpace(m.formInputs[0].Value()))
 		if err != nil {

@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 	"uuid"
 
@@ -190,6 +191,12 @@ func (store *Store) JournalID(ctx context.Context, date domain.Date) (uuid.UUID,
 
 func attributesFromNote(note domain.Note) ([]ports.IndexAttribute, error) {
 	switch note := note.(type) {
+	case domain.Person:
+		attributes := []ports.IndexAttribute{{Name: "name", Value: note.Name().String()}}
+		if !note.Groups().IsEmpty() {
+			attributes = append(attributes, ports.IndexAttribute{Name: "groups", Value: strings.Join(note.Groups().Strings(), ", ")})
+		}
+		return attributes, nil
 	case domain.Page:
 		attributes := []ports.IndexAttribute{{Name: "title", Value: note.Title().String()}}
 		if !note.Area().IsZero() {

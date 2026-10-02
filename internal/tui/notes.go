@@ -116,6 +116,11 @@ func (m *model) setNotes(notes []app.ListedNote) {
 
 func noteName(note app.ListedNote) string {
 	switch note.Kind {
+	case domain.NoteKindPerson:
+		if groups := note.Attributes["groups"]; groups != "" {
+			return note.Attributes["name"] + " [" + groups + "]"
+		}
+		return note.Attributes["name"]
 	case domain.NoteKindPage:
 		if area := note.Attributes["area"]; area != "" {
 			return note.Attributes["title"] + " [" + area + "]"

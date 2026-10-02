@@ -39,6 +39,7 @@ func New(configFile *configlib.ConfigFile[appconfig.Settings], newClient ClientF
 			newCaptureCommand(newClient),
 			newJournalCommand(newClient),
 			newPageCommand(newClient),
+			newPersonCommand(newClient),
 			newRebuildCommand(newClient),
 			configurfave.NewConfigCommand(configFile),
 			NewSetupCommand(configFile),

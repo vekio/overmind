@@ -65,6 +65,30 @@ func (Parser) Parse(source []byte) (ports.IndexRecord, error) {
 	record := ports.IndexRecord{ID: id, Kind: kind, CreatedAt: createdAt, UpdatedAt: updatedAt, Tags: tags}
 
 	switch kind {
+	case domain.NoteKindPerson:
+		if result.Analysis.Header.Title == nil {
+			return ports.IndexRecord{}, fmt.Errorf("person name is required")
+		}
+		name, err := domain.NewTitle(result.Analysis.Header.Title.Text)
+		if err != nil {
+			return ports.IndexRecord{}, err
+		}
+		record.Attributes = append(record.Attributes, ports.IndexAttribute{Name: "name", Value: name.String()})
+		if value, ok := attributes.Lookup("overmind-groups"); ok && strings.TrimSpace(value) != "" {
+			var values []domain.Group
+			for _, part := range strings.Split(value, ",") {
+				group, err := domain.NewGroup(part)
+				if err != nil {
+					return ports.IndexRecord{}, fmt.Errorf("invalid overmind-groups: %w", err)
+				}
+				values = append(values, group)
+			}
+			groups, err := domain.NewGroups(values...)
+			if err != nil {
+				return ports.IndexRecord{}, fmt.Errorf("invalid overmind-groups: %w", err)
+			}
+			record.Attributes = append(record.Attributes, ports.IndexAttribute{Name: "groups", Value: strings.Join(groups.Strings(), ", ")})
+		}
 	case domain.NoteKindPage:
 		if result.Analysis.Header.Title == nil {
 			return ports.IndexRecord{}, fmt.Errorf("page title is required")

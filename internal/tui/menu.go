@@ -9,10 +9,13 @@ const (
 	actionJournal
 	actionRebuild
 	actionList
+	actionPerson
 )
 
 func (a action) String() string {
 	switch a {
+	case actionPerson:
+		return "Person"
 	case actionPage:
 		return "Page"
 	case actionBookmark:
@@ -41,4 +44,5 @@ var menuItems = []menuItem{
 	{actionBookmark, "Bookmark", "Save a web address"},
 	{actionJournal, "Journal", "Open today's journal editor"},
 	{actionRebuild, "Rebuild index", "Index the AsciiDoc notes in the vault"},
+	{actionPerson, "Person", "Create a person and organize them in groups"},
 }

@@ -17,6 +17,7 @@ const (
 	NoteKindJournal  NoteKind = "journal"
 	NoteKindInbox    NoteKind = "inbox"
 	NoteKindBookmark NoteKind = "bookmark"
+	NoteKindPerson   NoteKind = "person"
 )
 
 // ParseNoteKind parses a note kind.
@@ -31,7 +32,7 @@ func ParseNoteKind(value string) (NoteKind, error) {
 // IsValid reports whether kind is supported.
 func (kind NoteKind) IsValid() bool {
 	switch kind {
-	case NoteKindPage, NoteKindJournal, NoteKindInbox, NoteKindBookmark:
+	case NoteKindPage, NoteKindJournal, NoteKindInbox, NoteKindBookmark, NoteKindPerson:
 		return true
 	default:
 		return false

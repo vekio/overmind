@@ -11,12 +11,15 @@ const (
 	journalTemplate  = "journal"
 	inboxTemplate    = "inbox"
 	bookmarkTemplate = "bookmark"
+	personTemplate   = "person"
 )
 
 func templateName(note domain.Note) (string, error) {
 	switch note.(type) {
 	case domain.Page:
 		return pageTemplate, nil
+	case domain.Person:
+		return personTemplate, nil
 	case domain.Journal:
 		return journalTemplate, nil
 	case domain.Inbox:

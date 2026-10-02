@@ -210,6 +210,8 @@ func (m model) begin(selected action) (tea.Model, tea.Cmd) {
 		return m.startCapture()
 	case actionPage:
 		return m.startForm([]formField{{"Title", "Page title"}, {"Area (optional)", "project/subarea"}, {"Tags (optional, comma-separated)", "tag-one, tag-two"}})
+	case actionPerson:
+		return m.startForm([]formField{{"Name", "Full name"}, {"Groups (optional, comma-separated)", "work, university"}, {"Tags (optional, comma-separated)", "tag-one, tag-two"}})
 	case actionBookmark:
 		return m.startForm([]formField{{"URL", "https://example.com"}, {"Tags (optional, comma-separated)", "tag-one, tag-two"}})
 	case actionJournal:
