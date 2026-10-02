@@ -16,6 +16,7 @@ import (
 func New(configFile *configlib.ConfigFile[appconfig.Settings], newClient ClientFactory) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:                  "overmind",
+		Version:               buildVersion(),
 		Usage:                 "manage the overmind knowledge base",
 		Description:           "Run without a command to open the terminal interface.",
 		EnableShellCompletion: true,
