@@ -2,68 +2,43 @@ package tui
 
 import (
 	"context"
+	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/ports"
+	"reflect"
 	"testing"
-	"time"
-	"uuid"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vekio/overmind/internal/app"
-	"github.com/vekio/overmind/internal/domain"
 )
 
-type deletingClient struct {
-	Client
-	deleted []uuid.UUID
-}
-
-func (client *deletingClient) DeleteNote(_ context.Context, id uuid.UUID) error {
-	client.deleted = append(client.deleted, id)
-	return nil
-}
-
-func (client *deletingClient) ListNotes(context.Context) ([]app.ListedNote, error) {
-	return nil, nil
-}
-
-func TestNotesDeleteRequiresConfirmation(t *testing.T) {
-	client := &deletingClient{}
-	m := newModel(context.Background(), client)
-	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
-	m.setNotes([]app.ListedNote{{ID: id, Kind: domain.NoteKindInbox, CreatedAt: time.Now()}})
-	m.screen = screenNotes
-
-	next, _ := m.Update(tea.KeyPressMsg{Code: 'd'})
+func TestNotesQueryAndDummyActionsPreserveRows(t *testing.T) {
+	m := newApplicationModel(context.Background(), func(context.Context, app.ListNotesQuery) (app.ListNotesResult, error) {
+		return app.ListNotesResult{Notes: []ports.NoteSummary{{Type: "habit", Label: "Beber agua"}, {Type: "page", Label: "Plan"}}}, nil
+	})
+	next, cmd := m.begin(actionList)
 	m = next.(model)
-	if m.screen != screenAsk || m.deleteNoteID != id || m.ask.options[m.ask.selected].id != cancelOption {
-		t.Fatal("delete confirmation did not default to cancel")
-	}
-	next, _ = m.Update(askAnswer{option: cancelOption})
+	next, cmd = m.Update(cmd())
 	m = next.(model)
-	if m.screen != screenNotes || len(client.deleted) != 0 {
-		t.Fatal("cancelled delete changed the note")
-	}
-
-	next, _ = m.Update(tea.KeyPressMsg{Code: 'd'})
+	next, _ = m.Update(cmd())
 	m = next.(model)
-	next, command := m.Update(askAnswer{option: deleteOption})
+	if m.screen != screenNotes || m.noteCount != 2 {
+		t.Fatal("notes table did not show indexed rows")
+	}
+	before := m.notes.Rows()
+	for _, key := range []rune{'e'} {
+		next, cmd := m.Update(tea.KeyPressMsg{Code: key})
+		m = next.(model)
+		if cmd == nil || m.notification.text == "" || !reflect.DeepEqual(m.notes.Rows(), before) {
+			t.Fatal("dummy table action altered rows or omitted notification")
+		}
+	}
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = next.(model)
-	if m.screen != screenBusy || command == nil {
-		t.Fatal("confirmed delete did not start")
+	if m.notes.Cursor() != 1 {
+		t.Fatal("table did not navigate downwards")
 	}
-	if result, ok := command().(noteDeleteResult); !ok || result.err != nil {
-		t.Fatalf("delete result = %#v", result)
-	}
-	if len(client.deleted) != 1 || client.deleted[0] != id {
-		t.Fatalf("deleted IDs = %v", client.deleted)
-	}
-	next, _ = m.Update(noteDeleteResult{})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	m = next.(model)
-	if m.screen != screenBusy || m.notification.text != "Note deleted" {
-		t.Fatalf("delete did not refresh notes: screen=%d notification=%q", m.screen, m.notification.text)
-	}
-	next, _ = m.Update(notesResult{})
-	m = next.(model)
-	if m.screen != screenNotes || m.noteCount != 0 {
-		t.Fatalf("refreshed notes = screen %d count %d", m.screen, m.noteCount)
+	if m.screen != screenMenu {
+		t.Fatal("escape did not return to selector")
 	}
 }

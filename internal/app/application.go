@@ -7,44 +7,34 @@ type Application struct {
 	Queries  Queries
 }
 
+// Queries contains read-only application operations.
+type Queries struct{ ListNotes *ListNotesHandler }
+
 // Commands contains the application's state-changing handlers.
 type Commands struct {
+	DeleteNote     *DeleteNoteHandler
+	Reindex        *ReindexHandler
+	CreateHabit    *CreateHabitHandler
 	CreatePage     *CreatePageHandler
 	CreatePerson   *CreatePersonHandler
 	CreateJournal  *CreateJournalHandler
-	Capture        *CaptureHandler
+	CreateInbox    *CreateInboxHandler
 	CreateBookmark *CreateBookmarkHandler
-	RebuildIndex   *RebuildIndexHandler
-	UpdateNote     *UpdateNoteHandler
-	DeleteNote     *DeleteNoteHandler
-}
-
-// Queries contains the application's read-only handlers.
-type Queries struct {
-	ListNotes   *ListNotesHandler
-	OpenNote    *OpenNoteHandler
-	FindJournal *FindJournalHandler
 }
 
 // New creates the application handlers.
 func New(dependencies Dependencies) *Application {
-	saver := newNoteSaver(dependencies.Renderer, dependencies.Writer, dependencies.Index)
-
 	return &Application{
+		Queries: Queries{ListNotes: newListNotesHandler(dependencies.NoteFinder)},
 		Commands: Commands{
-			CreatePage:     newCreatePageHandler(saver, dependencies.IDGenerator),
-			CreatePerson:   newCreatePersonHandler(saver, dependencies.IDGenerator),
-			CreateJournal:  newCreateJournalHandler(saver, dependencies.Index, dependencies.IDGenerator),
-			Capture:        newCaptureHandler(saver, dependencies.IDGenerator),
-			CreateBookmark: newCreateBookmarkHandler(saver, dependencies.IDGenerator),
-			RebuildIndex:   newRebuildIndexHandler(dependencies.Walker, dependencies.Parser, dependencies.Index),
-			UpdateNote:     newUpdateNoteHandler(dependencies.Reader, dependencies.Writer, dependencies.Parser, dependencies.Index),
-			DeleteNote:     newDeleteNoteHandler(dependencies.Deleter, dependencies.Index),
-		},
-		Queries: Queries{
-			ListNotes:   newListNotesHandler(dependencies.Lister),
-			OpenNote:    newOpenNoteHandler(dependencies.Reader),
-			FindJournal: newFindJournalHandler(dependencies.Index),
+			DeleteNote:     newDeleteNoteHandler(dependencies.NoteStore, dependencies.IndexDeleter),
+			Reindex:        newReindexHandler(dependencies.NoteScanner, dependencies.NoteProjector, dependencies.IndexRebuilder),
+			CreateHabit:    newCreateHabitHandler(dependencies.Habits, dependencies.IDGenerator),
+			CreatePage:     newCreatePageHandler(dependencies.Pages, dependencies.IDGenerator),
+			CreatePerson:   newCreatePersonHandler(dependencies.Persons, dependencies.IDGenerator),
+			CreateJournal:  newCreateJournalHandler(dependencies.Journals, dependencies.IDGenerator),
+			CreateInbox:    newCreateInboxHandler(dependencies.Inbox, dependencies.IDGenerator),
+			CreateBookmark: newCreateBookmarkHandler(dependencies.Bookmarks, dependencies.IDGenerator),
 		},
 	}
 }

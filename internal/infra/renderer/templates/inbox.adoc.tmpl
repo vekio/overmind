@@ -1,8 +1,0 @@
-{{ define "inbox" -}}
-:overmind-id: {{ .Metadata.ID }}
-:overmind-type: {{ .Metadata.Kind }}
-:overmind-created-at: {{ rfc3339 .Metadata.CreatedAt }}
-:overmind-updated-at: {{ rfc3339 .Metadata.UpdatedAt }}
-
-{{ .Content }}
-{{ end -}}

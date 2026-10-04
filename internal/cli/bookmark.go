@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/app"
 )
 
 func newBookmarkCommand(newClient ClientFactory) *urfavecli.Command {
@@ -30,25 +30,16 @@ func newBookmarkCommand(newClient ClientFactory) *urfavecli.Command {
 				return fmt.Errorf("unexpected arguments after URL: %q", command.Args().Slice())
 			}
 
-			bookmarkURL, err := domain.NewURL(urlArguments[0])
-			if err != nil {
-				return err
-			}
-			tags, err := parseTags(command.StringSlice("tag"))
-			if err != nil {
-				return err
-			}
-
 			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			result, err := client.CreateBookmark(ctx, bookmarkURL, tags)
+			result, err := client.CreateBookmark(ctx, app.CreateBookmarkCommand{URL: urlArguments[0], Tags: command.StringSlice("tag")})
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, result.Path); err != nil {
-				return fmt.Errorf("write created bookmark location: %w", err)
+			if _, err := fmt.Fprintf(command.Writer, "%s\nID: %s\n", result.Bookmark.Summary(), result.Bookmark.ID()); err != nil {
+				return fmt.Errorf("write created bookmark summary: %w", err)
 			}
 			return nil
 		},

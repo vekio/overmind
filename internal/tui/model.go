@@ -3,141 +3,152 @@ package tui
 import (
 	"context"
 	"fmt"
-
 	"uuid"
 
 	"charm.land/bubbles/v2/table"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"github.com/vekio/overmind/internal/app"
 )
 
 type screen uint8
 
 const (
-	rebuildOption askOptionID = "rebuild"
+	screenMenu screen = iota
+	screenAsk
+	screenNotes
+)
+const (
+	reindexOption askOptionID = "reindex"
 	cancelOption  askOptionID = "cancel"
 	deleteOption  askOptionID = "delete"
 )
 
-const (
-	screenMenu screen = iota
-	screenForm
-	screenAsk
-	screenBusy
-	screenNotes
-)
-
+// The model queries notes asynchronously; creation actions remain placeholders.
 type model struct {
-	ctx          context.Context
-	client       Client
-	formInputs   []textinput.Model
-	formLabels   []string
-	formFocus    int
-	notes        table.Model
-	ask          ask
-	notification notification
-	noteEditor   noteEditorState
-	listedNotes  []app.ListedNote
-	deleteNoteID uuid.UUID
-
-	screen    screen
-	selected  int
-	action    action
-	problem   string
-	width     int
-	height    int
-	noteCount int
+	ctx                      context.Context
+	listNotes                ListNotesFunc
+	reindex                  ReindexFunc
+	reindexing               bool
+	deleteNote               DeleteNoteFunc
+	deleteID                 uuid.UUID
+	deleting                 bool
+	rows                     []noteRow
+	askReturn                screen
+	filters                  [2]textinput.Model
+	filterOpen               bool
+	filterFocus              int
+	revision                 uint64
+	loading, hasMore         bool
+	offset                   int
+	notes                    table.Model
+	ask                      ask
+	notification             notification
+	screen                   screen
+	selected                 int
+	action                   action
+	problem                  string
+	width, height, noteCount int
 }
 
-func newModel(ctx context.Context, client Client) model {
-	return model{ctx: ctx, client: client, notes: newNotesTable(80, 24), width: 80, height: 24}
+func newModel() model {
+	return model{ctx: context.Background(), filters: newFilterInputs(), notes: newNotesTable(80, 24), width: 80, height: 24}
 }
-
+func newApplicationModel(ctx context.Context, listNotes ListNotesFunc) model {
+	m := newModel()
+	m.ctx, m.listNotes = ctx, listNotes
+	return m
+}
 func (m model) Init() tea.Cmd { return nil }
-
 func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
-	case tea.WindowSizeMsg:
-		m.width, m.height = msg.Width, msg.Height
-		for index := range m.formInputs {
-			m.formInputs[index].SetWidth(max(20, msg.Width-4))
-		}
-		m.resizeNotesTable()
-		return m, nil
-	case notesResult:
-		if msg.err != nil {
-			m.screen = screenMenu
-			m.problem = msg.err.Error()
+	case loadNotes:
+		if msg.revision != m.revision {
 			return m, nil
 		}
-		m.setNotes(msg.notes)
-		m.screen = screenNotes
-		return m, nil
-	case noteDeleteResult:
-		m.deleteNoteID = uuid.Nil()
-		if msg.err != nil {
-			m.screen = screenNotes
-			return m, m.notify(msg.err.Error(), notificationError)
+		return m, m.fetchNotes(msg)
+	case notesLoaded:
+		if msg.revision != m.revision {
+			return m, nil
 		}
-		next, cmd := m.loadNotes()
-		m = next.(model)
-		return m, tea.Batch(cmd, m.notify("Note deleted", notificationSuccess))
-	case noteOpenResult:
-		return m.openNoteEditor(msg)
-	case noteEditorFinished:
-		return m.finishNoteEdit(msg.err)
-	case noteSaveResult:
-		return m.finishNoteSave(msg)
-	case operationResult:
+		m.loading = false
+		if msg.err != nil {
+			m.problem = msg.err.Error()
+			m.setNotes(nil)
+			m.hasMore = false
+			if m.filterOpen {
+				return m, nil
+			}
+			return m, m.notify(m.problem, notificationError)
+		}
 		m.problem = ""
-		if msg.err != nil {
-			m.screen = msg.returnScreen
-			return m, m.notify(msg.err.Error(), notificationError)
+		notes := msg.result.Notes
+		m.hasMore = len(notes) > notesPageSize
+		if m.hasMore {
+			notes = notes[:notesPageSize]
 		}
-		m.screen = screenMenu
-		return m, m.notify(msg.message, notificationSuccess)
+		rows := make([]noteRow, 0, len(notes))
+		for _, note := range notes {
+			rows = append(rows, noteRow{id: note.ID, kind: note.Type, name: note.Label, tags: note.Tags, updatedAt: note.UpdatedAt})
+		}
+		m.setNotes(rows)
+		m.notes.SetCursor(0)
+		return m, nil
+	case tea.WindowSizeMsg:
+		m.width, m.height = msg.Width, msg.Height
+		m.resizeNotesTable()
+		return m, nil
 	case dismissNotification:
 		if msg.id == m.notification.id {
 			m.notification.text = ""
 		}
 		return m, nil
-	case askAnswer:
-		if m.deleteNoteID != uuid.Nil() {
-			id := m.deleteNoteID
-			m.deleteNoteID = uuid.Nil()
-			if msg.option != deleteOption {
-				m.screen = screenNotes
-				return m, nil
-			}
-			m.screen = screenBusy
-			return m, func() tea.Msg {
-				return noteDeleteResult{err: m.client.DeleteNote(m.ctx, id)}
-			}
+	case deleteFinished:
+		if !m.deleting || msg.id != m.deleteID {
+			return m, nil
 		}
-		switch m.action {
-		case actionRebuild:
-			if msg.option != rebuildOption {
-				m.screen = screenMenu
-				return m, nil
-			}
-			m.screen = screenBusy
-			return m, func() tea.Msg {
-				count, err := m.client.RebuildIndex(m.ctx)
-				return operationResult{message: fmt.Sprintf("Indexed %d note(s)", count), err: err}
-			}
+		m.deleting = false
+		m.deleteID = uuid.Nil()
+		if msg.err != nil {
+			return m, m.notify(msg.err.Error(), notificationError)
+		}
+		if m.noteCount <= 1 && m.offset > 0 {
+			m.offset = max(0, m.offset-notesPageSize)
+		}
+		notification := m.notify("Note deleted", notificationSuccess)
+		return m, tea.Batch(notification, m.requestNotes(0))
+	case reindexFinished:
+		m.reindexing = false
+		if msg.err != nil {
+			return m, m.notify(msg.err.Error(), notificationError)
+		}
+		notification := m.notify(fmt.Sprintf("Indexed %d notes", msg.result.Indexed), notificationSuccess)
+		if m.screen == screenNotes {
+			return m, tea.Batch(notification, m.requestNotes(0))
+		}
+		return m, notification
+	case askAnswer:
+		m.screen = m.askReturn
+		if msg.option == deleteOption && !m.deleting && m.deleteID != uuid.Nil() {
+			m.deleting = true
+			return m, m.runDelete()
+		}
+		if msg.option == reindexOption && !m.reindexing {
+			m.reindexing = true
+			return m, m.runReindex()
 		}
 		return m, nil
 	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
+		if m.filterOpen {
+			return m.updateFilters(message)
+		}
 		switch m.screen {
 		case screenMenu:
-			if msg.String() == "q" || msg.String() == "esc" {
-				return m, tea.Quit
-			}
 			switch msg.String() {
+			case "q", "esc":
+				return m, tea.Quit
 			case "up", "k":
 				m.selected = (m.selected - 1 + len(menuItems)) % len(menuItems)
 				return m, nil
@@ -147,93 +158,70 @@ func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				return m.begin(menuItems[m.selected].action)
 			}
-		case screenForm:
-			if msg.String() == "esc" {
-				m.screen = screenMenu
-				m.problem = ""
+		case screenAsk:
+			if msg.String() == "q" || msg.String() == "esc" {
+				m.screen = m.askReturn
 				return m, nil
 			}
+		case screenNotes:
 			switch msg.String() {
-			case "tab", "down":
-				return m.focusFormField((m.formFocus + 1) % len(m.formInputs))
-			case "shift+tab", "up":
-				return m.focusFormField((m.formFocus - 1 + len(m.formInputs)) % len(m.formInputs))
-			case "enter":
-				return m.submitForm(false)
-			case "ctrl+e":
-				return m.submitForm(true)
-			}
-		case screenAsk:
-			if msg.String() == "esc" || msg.String() == "q" {
-				if m.deleteNoteID != uuid.Nil() {
-					m.deleteNoteID = uuid.Nil()
-					m.screen = screenNotes
-				} else {
-					m.screen = screenMenu
+			case "q", "esc":
+				m.screen = screenMenu
+				return m, nil
+			case "e", "enter":
+				return m, m.notify("Demo: edit selected", notificationInfo)
+			case "d":
+				return m.confirmDelete()
+			case "r":
+				return m, m.requestNotes(0)
+			case "f", "/":
+				m.filterOpen = true
+				return m, m.filters[m.filterFocus].Focus()
+			case "n":
+				if m.hasMore && !m.loading {
+					m.offset += notesPageSize
+					return m, m.requestNotes(0)
+				}
+				return m, nil
+			case "p":
+				if m.offset > 0 && !m.loading {
+					m.offset = max(0, m.offset-notesPageSize)
+					return m, m.requestNotes(0)
 				}
 				return m, nil
 			}
-		case screenBusy:
-			return m, nil
-		case screenNotes:
-			if msg.String() == "esc" || msg.String() == "q" {
-				m.screen = screenMenu
-				return m, nil
-			}
-			switch msg.String() {
-			case "e", "enter":
-				return m.editSelectedNote()
-			case "r":
-				return m.loadNotes()
-			case "d":
-				return m.confirmDeleteSelectedNote()
-			}
 		}
 	}
-
+	if m.filterOpen {
+		return m.updateFilters(message)
+	}
 	var cmd tea.Cmd
 	switch m.screen {
-	case screenForm:
-		m.formInputs[m.formFocus], cmd = m.formInputs[m.formFocus].Update(message)
-	case screenNotes:
-		m.notes, cmd = m.notes.Update(message)
 	case screenAsk:
 		m.ask, cmd = m.ask.Update(message)
+	case screenNotes:
+		m.notes, cmd = m.notes.Update(message)
 	}
 	return m, cmd
 }
-
 func (m model) begin(selected action) (tea.Model, tea.Cmd) {
 	m.action = selected
 	m.problem = ""
 	switch selected {
-	case actionCapture:
-		return m.startCapture()
-	case actionPage:
-		return m.startForm([]formField{{"Title", "Page title"}, {"Area (optional)", "project/subarea"}, {"Tags (optional, comma-separated)", "tag-one, tag-two"}})
-	case actionPerson:
-		return m.startForm([]formField{{"Name", "Full name"}, {"Groups (optional, comma-separated)", "work, university"}, {"Tags (optional, comma-separated)", "tag-one, tag-two"}})
-	case actionBookmark:
-		return m.startForm([]formField{{"URL", "https://example.com"}, {"Tags (optional, comma-separated)", "tag-one, tag-two"}})
-	case actionJournal:
-		return m.startJournal()
-	case actionRebuild:
-		m.ask = newAsk(
-			"Rebuild the index from notes in the vault?",
-			cancelOption,
-			askOption{id: rebuildOption, label: "Yes", icon: "✓", shortcut: "y"},
-			askOption{id: cancelOption, label: "No", icon: "✕", shortcut: "n"},
-		)
+	case actionList:
+		m.screen = screenNotes
+		return m, m.requestNotes(0)
+	case actionReindex:
+		m.askReturn = screenMenu
+		if m.reindexing {
+			return m, m.notify("Reindexing is already running", notificationInfo)
+		}
+		m.ask = newAsk("Rebuild the index from note files?", cancelOption,
+			askOption{id: reindexOption, label: "Yes", icon: "✓", shortcut: "y"},
+			askOption{id: cancelOption, label: "No", icon: "✕", shortcut: "n"})
 		m.screen = screenAsk
 		return m, nil
-	case actionList:
-		return m.loadNotes()
+	default:
+		return m, m.notify(fmt.Sprintf("Demo: %s selected", selected), notificationInfo)
 	}
-	return m, nil
-}
-
-type operationResult struct {
-	message      string
-	returnScreen screen
-	err          error
 }

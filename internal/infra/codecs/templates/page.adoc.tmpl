@@ -1,0 +1,9 @@
+{{ define "page" }}= {{ .Title }}
+:overmind-id: {{ .ID }}
+:overmind-type: {{ pageKind }}
+:overmind-area: {{ .Area }}
+:overmind-tags: {{ tags .Tags }}
+:overmind-created-at: {{ timestamp .Metadata.CreatedAt }}
+:overmind-updated-at: {{ timestamp .Metadata.UpdatedAt }}
+
+{{ end }}

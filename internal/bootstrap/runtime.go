@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"sync"
 
 	configlib "github.com/vekio/config"
 	"github.com/vekio/overmind/internal/app"
@@ -15,6 +16,7 @@ import (
 
 // Runtime loads and owns the configured application services.
 type Runtime struct {
+	mutex       sync.Mutex
 	configFile  *configlib.ConfigFile[appconfig.Settings]
 	application *app.Application
 	closers     []io.Closer
@@ -27,6 +29,11 @@ func New(configFile *configlib.ConfigFile[appconfig.Settings]) *Runtime {
 
 // Application returns the configured application, creating it when first needed.
 func (runtime *Runtime) Application(ctx context.Context) (*app.Application, error) {
+	runtime.mutex.Lock()
+	defer runtime.mutex.Unlock()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if runtime.application != nil {
 		return runtime.application, nil
 	}
@@ -47,6 +54,8 @@ func (runtime *Runtime) Application(ctx context.Context) (*app.Application, erro
 
 // Close releases the configured application resources.
 func (runtime *Runtime) Close() error {
+	runtime.mutex.Lock()
+	defer runtime.mutex.Unlock()
 	var closeErr error
 	for _, closer := range slices.Backward(runtime.closers) {
 		if err := closer.Close(); err != nil {

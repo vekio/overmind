@@ -1,0 +1,7 @@
+{{ define "inbox" }}:overmind-id: {{ .ID }}
+:overmind-type: {{ inboxKind }}
+:overmind-tags: {{ tags .Tags }}
+:overmind-created-at: {{ timestamp .Metadata.CreatedAt }}
+:overmind-updated-at: {{ timestamp .Metadata.UpdatedAt }}
+
+{{ .Content }}{{ end }}

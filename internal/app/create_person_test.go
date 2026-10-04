@@ -1,72 +1,83 @@
 package app_test
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"reflect"
 	"testing"
+	"uuid"
 
 	"github.com/vekio/overmind/internal/app"
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain/persons"
+	"github.com/vekio/overmind/internal/ports"
 )
 
-func TestPersonCreationEditingAndRebuild(t *testing.T) {
-	ctx := context.Background()
-	fixture := newAppFixture(t)
-	name, _ := domain.NewTitle("Ana García")
-	work, _ := domain.NewGroup("Trabajo")
-	university, _ := domain.NewGroup("Universidad")
-	groups, _ := domain.NewGroups(work, university)
-	tag, _ := domain.NewTag("Amiga")
-	tags, _ := domain.NewTags(tag)
-	result, err := fixture.application.Commands.CreatePerson.Handle(ctx, app.CreatePersonCommand{Name: name, Groups: groups, Tags: tags})
+type personTestRepository struct {
+	person *persons.Person
+	err    error
+}
+
+func (repo *personTestRepository) Save(_ context.Context, person *persons.Person) error {
+	if repo.err != nil {
+		return repo.err
+	}
+	repo.person = person
+	return nil
+}
+func (repo *personTestRepository) ByID(context.Context, uuid.UUID) (*persons.Person, error) {
+	if repo.person == nil {
+		return nil, ports.ErrPersonNotFound
+	}
+	return repo.person, nil
+}
+
+func TestCreatePerson(t *testing.T) {
+	repo := &personTestRepository{}
+	application := app.New(app.Dependencies{Persons: repo, IDGenerator: testIDGenerator{}})
+	result, err := application.Commands.CreatePerson.Handle(context.Background(), app.CreatePersonCommand{Name: " Ana García ", Groups: []string{"Trabajo", "Universidad"}, Tags: []string{"Amiga"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	id := result.Person.Metadata().ID()
-	original, err := fixture.application.Queries.OpenNote.Handle(ctx, id)
-	if err != nil {
-		t.Fatal(err)
+	person := result.Person
+	if person != repo.person || person.ID() == uuid.Nil() || person.Name().String() != "Ana García" || !reflect.DeepEqual(person.Groups().Strings(), []string{"trabajo", "universidad"}) || !reflect.DeepEqual(person.Tags().Strings(), []string{"amiga"}) {
+		t.Fatal("raw command did not create and persist validated domain values")
 	}
-	for _, text := range []string{"= Ana García", ":overmind-type: person", ":overmind-groups: trabajo, universidad", "== Contact", "== Context", "== Notes"} {
-		if !bytes.Contains(original, []byte(text)) {
-			t.Fatalf("template missing %q: %s", text, original)
+	if person.Metadata().IsZero() || !person.Metadata().CreatedAt().Equal(person.Metadata().UpdatedAt()) {
+		t.Fatal("initial timestamps must match")
+	}
+}
+func TestCreatePersonRejectsInvalidInputWithoutSaving(t *testing.T) {
+	for _, command := range []app.CreatePersonCommand{
+		{}, {Name: "Ana", Groups: []string{"!!!"}}, {Name: "Ana", Groups: []string{"Work", "work"}}, {Name: "Ana", Tags: []string{"!!!"}}, {Name: "Ana", Tags: []string{"Amiga", "amiga"}},
+	} {
+		repo := &personTestRepository{}
+		application := app.New(app.Dependencies{Persons: repo, IDGenerator: testIDGenerator{}})
+		result, err := application.Commands.CreatePerson.Handle(context.Background(), command)
+		if err == nil || result.Person != nil || repo.person != nil {
+			t.Fatal("invalid command saved a person")
 		}
 	}
-	listed, err := fixture.application.Queries.ListNotes.Handle(ctx)
-	if err != nil {
+}
+func TestCreatePersonSupportsEmptyGroupsAndTagsAndPropagatesFailures(t *testing.T) {
+	ctx := context.Background()
+	repo := &personTestRepository{}
+	application := app.New(app.Dependencies{Persons: repo, IDGenerator: testIDGenerator{}})
+	command := app.CreatePersonCommand{Name: "Ana"}
+	created, err := application.Commands.CreatePerson.Handle(ctx, command)
+	if err != nil || !created.Person.Groups().IsEmpty() || !created.Person.Tags().IsEmpty() {
+		t.Fatalf("optional groups/tags = %v", err)
+	}
+	failure := errors.New("disk failure")
+	repo.err = failure
+	if result, err := application.Commands.CreatePerson.Handle(ctx, command); !errors.Is(err, failure) || result.Person != nil {
+		t.Fatalf("save failure = %v", err)
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	cancel()
+	if _, err := application.Commands.CreatePerson.Handle(ctx, command); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
-	note := listedNote(t, listed.Notes, id)
-	if note.Kind != domain.NoteKindPerson || note.Attributes["name"] != "Ana García" || note.Attributes["groups"] != "trabajo, universidad" || !reflect.DeepEqual(note.Tags, []string{"amiga"}) {
-		t.Fatalf("indexed person = %+v", note)
-	}
-	invalid := bytes.Replace(original, []byte("trabajo, universidad"), []byte("Trabajo, trabajo"), 1)
-	if _, err := fixture.application.Commands.UpdateNote.Handle(ctx, app.UpdateNoteCommand{ID: id, Original: original, Source: invalid}); err == nil {
-		t.Fatal("edit accepted duplicate groups")
-	}
-	edited := bytes.Replace(original, []byte("= Ana García"), []byte("= Ana García López"), 1)
-	edited = bytes.Replace(edited, []byte("trabajo, universidad"), []byte("universidad"), 1)
-	updated, err := fixture.application.Commands.UpdateNote.Handle(ctx, app.UpdateNoteCommand{ID: id, Original: original, Source: edited})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Contains(updated.Source, []byte("= Ana García López")) {
-		t.Fatal("edit lost name")
-	}
-	if err := fixture.index.Delete(ctx, id); err != nil {
-		t.Fatal(err)
-	}
-	rebuilt, err := fixture.application.Commands.RebuildIndex.Handle(ctx)
-	if err != nil || rebuilt.Count != 1 {
-		t.Fatalf("rebuild = %+v, %v", rebuilt, err)
-	}
-	listed, err = fixture.application.Queries.ListNotes.Handle(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	note = listedNote(t, listed.Notes, id)
-	if note.Attributes["name"] != "Ana García López" || note.Attributes["groups"] != "universidad" || !reflect.DeepEqual(note.Tags, []string{"amiga"}) {
-		t.Fatalf("rebuilt person = %+v", note)
+	if _, err := app.New(app.Dependencies{}).Commands.CreatePerson.Handle(context.Background(), command); err == nil {
+		t.Fatal("missing dependencies accepted")
 	}
 }

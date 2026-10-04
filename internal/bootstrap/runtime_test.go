@@ -9,6 +9,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/vekio/overmind/internal/app"
 	appconfig "github.com/vekio/overmind/internal/config"
 )
 
@@ -74,5 +75,45 @@ func TestRuntimeLoadsConfigurationLazilyAndReusesApplication(t *testing.T) {
 	}
 	if err := runtime.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestRuntimeConcurrentQueriesShareOneApplication(t *testing.T) {
+	root := t.TempDir()
+	configFile, err := appconfig.NewFile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := configFile.SetPath(filepath.Join(root, "config.yml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := configFile.Create(appconfig.Settings{Mode: appconfig.ModeLocal, VaultPath: filepath.Join(root, "vault")}); err != nil {
+		t.Fatal(err)
+	}
+	runtime := New(configFile)
+	t.Cleanup(func() { _ = runtime.Close() })
+	type response struct {
+		application *app.Application
+		err         error
+	}
+	results := make(chan response, 8)
+	for range 8 {
+		go func() {
+			application, err := runtime.Application(context.Background())
+			results <- response{application, err}
+		}()
+	}
+	var first *app.Application
+	for range 8 {
+		result := <-results
+		if result.err != nil {
+			t.Fatal(result.err)
+		}
+		if first == nil {
+			first = result.application
+		}
+		if result.application != first {
+			t.Fatal("concurrent queries initialized multiple application instances")
+		}
 	}
 }

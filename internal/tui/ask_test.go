@@ -7,8 +7,8 @@ import (
 )
 
 func TestAskUsesDefaultArrowsAndShortcuts(t *testing.T) {
-	a := newAsk("Delete?", cancelOption,
-		askOption{id: deleteOption, label: "Yes", shortcut: "y"},
+	a := newAsk("Rebuild?", cancelOption,
+		askOption{id: reindexOption, label: "Yes", shortcut: "y"},
 		askOption{id: cancelOption, label: "No", shortcut: "n"},
 	)
 	if a.options[a.selected].id != cancelOption {
@@ -20,7 +20,7 @@ func TestAskUsesDefaultArrowsAndShortcuts(t *testing.T) {
 	}
 	a, _ = a.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 	_, answerCmd = a.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	if answerCmd().(askAnswer).option != deleteOption {
+	if answerCmd().(askAnswer).option != reindexOption {
 		t.Fatal("left arrow did not select Yes")
 	}
 	_, answerCmd = a.Update(tea.KeyPressMsg{Code: 'n'})

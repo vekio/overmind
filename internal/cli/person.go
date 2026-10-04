@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/app"
 )
 
 func newPersonCommand(newClient ClientFactory) *urfavecli.Command {
@@ -31,39 +31,17 @@ func newPersonCommand(newClient ClientFactory) *urfavecli.Command {
 				return fmt.Errorf("unexpected arguments after name: %q", command.Args().Slice())
 			}
 
-			name, err := domain.NewTitle(nameArguments[0])
-			if err != nil {
-				return err
-			}
-
-			values := make([]domain.Group, 0)
-			for _, value := range command.StringSlice("group") {
-				group, err := domain.NewGroup(value)
-				if err != nil {
-					return err
-				}
-				values = append(values, group)
-			}
-			groups, err := domain.NewGroups(values...)
-			if err != nil {
-				return err
-			}
-
-			tags, err := parseTags(command.StringSlice("tag"))
-			if err != nil {
-				return err
-			}
-
+			input := app.CreatePersonCommand{Name: nameArguments[0], Groups: command.StringSlice("group"), Tags: command.StringSlice("tag")}
 			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			result, err := client.CreatePerson(ctx, name, groups, tags)
+			result, err := client.CreatePerson(ctx, input)
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, result.Path); err != nil {
-				return fmt.Errorf("write created person location: %w", err)
+			if _, err := fmt.Fprintf(command.Writer, "%s\nID: %s\n", result.Person.Summary(), result.Person.ID()); err != nil {
+				return fmt.Errorf("write created person summary: %w", err)
 			}
 			return nil
 		},

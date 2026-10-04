@@ -3,30 +3,46 @@ package app
 import (
 	"context"
 	"fmt"
+	"strings"
 	"uuid"
 
 	"github.com/vekio/overmind/internal/ports"
 )
 
-// DeleteNoteHandler removes a note document and its indexed metadata.
+// DeleteNoteCommand identifies any kind of note using raw input.
+type DeleteNoteCommand struct{ ID string }
+type DeleteNoteResult struct{ ID uuid.UUID }
+
 type DeleteNoteHandler struct {
-	files ports.NoteDeleter
-	index ports.NoteIndex
+	store ports.NoteStore
+	index ports.NoteIndexDeleter
 }
 
-func newDeleteNoteHandler(files ports.NoteDeleter, index ports.NoteIndex) *DeleteNoteHandler {
-	return &DeleteNoteHandler{files: files, index: index}
+func newDeleteNoteHandler(store ports.NoteStore, index ports.NoteIndexDeleter) *DeleteNoteHandler {
+	return &DeleteNoteHandler{store: store, index: index}
 }
 
-func (handler *DeleteNoteHandler) Handle(ctx context.Context, id uuid.UUID) error {
-	if id == uuid.Nil() {
-		return fmt.Errorf("note ID is required")
+// Handle removes the source document before its derived index entry. Both
+// removals are idempotent, so retrying also repairs a previous partial failure.
+func (handler *DeleteNoteHandler) Handle(ctx context.Context, command DeleteNoteCommand) (DeleteNoteResult, error) {
+	if err := ctx.Err(); err != nil {
+		return DeleteNoteResult{}, err
 	}
-	if err := handler.files.Delete(ctx, id); err != nil {
-		return fmt.Errorf("delete note %s from vault: %w", id, err)
+	id, err := uuid.Parse(strings.TrimSpace(command.ID))
+	if err != nil {
+		return DeleteNoteResult{}, fmt.Errorf("invalid note ID: %w", err)
+	}
+	if id == uuid.Nil() {
+		return DeleteNoteResult{}, fmt.Errorf("note ID must not be nil")
+	}
+	if handler.store == nil || handler.index == nil {
+		return DeleteNoteResult{}, fmt.Errorf("delete note dependencies are not configured")
+	}
+	if err := handler.store.Delete(ctx, id); err != nil {
+		return DeleteNoteResult{}, fmt.Errorf("delete note document: %w", err)
 	}
 	if err := handler.index.Delete(ctx, id); err != nil {
-		return fmt.Errorf("delete note %s from index: %w", id, err)
+		return DeleteNoteResult{}, fmt.Errorf("note document removed but index update failed; retry delete or run overmind reindex: %w", err)
 	}
-	return nil
+	return DeleteNoteResult{ID: id}, nil
 }

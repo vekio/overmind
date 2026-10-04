@@ -2,45 +2,71 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain/pages"
+	"github.com/vekio/overmind/internal/domain/shared"
 	"github.com/vekio/overmind/internal/ports"
 )
 
-// CreatePageCommand contains the input for creating a page.
+// CreatePageCommand requires a title; area and tags are optional raw inputs.
 type CreatePageCommand struct {
-	Title domain.Title
-	Area  domain.Area
-	Tags  domain.Tags
+	Title string
+	Area  string
+	Tags  []string
 }
-
-// CreatePageResult contains the created page and its path.
-type CreatePageResult struct {
-	Page domain.Page
-	Path string
-}
-
-// CreatePageHandler creates page notes.
+type CreatePageResult struct{ Page *pages.Page }
 type CreatePageHandler struct {
-	saver *noteSaver
-	ids   ports.IDGenerator
+	repository ports.PageRepository
+	ids        ports.IDGenerator
 }
 
-func newCreatePageHandler(saver *noteSaver, ids ports.IDGenerator) *CreatePageHandler {
-	return &CreatePageHandler{saver: saver, ids: ids}
+func newCreatePageHandler(repository ports.PageRepository, ids ports.IDGenerator) *CreatePageHandler {
+	return &CreatePageHandler{repository: repository, ids: ids}
 }
-
-// Handle creates, persists and indexes a page.
 func (handler *CreatePageHandler) Handle(ctx context.Context, command CreatePageCommand) (CreatePageResult, error) {
-	page, err := domain.NewPage(handler.ids.Generate(), command.Title, command.Area, command.Tags, time.Now())
+	if err := ctx.Err(); err != nil {
+		return CreatePageResult{}, err
+	}
+	if handler.repository == nil || handler.ids == nil {
+		return CreatePageResult{}, fmt.Errorf("create page dependencies are not configured")
+	}
+	title, err := shared.NewTitle(command.Title)
 	if err != nil {
 		return CreatePageResult{}, err
 	}
-	path, err := handler.saver.save(ctx, page)
-	if err != nil {
-		return CreatePageResult{}, err
+	var area pages.Area
+	if command.Area != "" {
+		area, err = pages.NewArea(command.Area)
+		if err != nil {
+			return CreatePageResult{}, err
+		}
 	}
 
-	return CreatePageResult{Page: page, Path: path}, nil
+	values := make([]shared.Tag, 0, len(command.Tags))
+	for _, raw := range command.Tags {
+		tag, err := shared.NewTag(raw)
+		if err != nil {
+			return CreatePageResult{}, err
+		}
+		values = append(values, tag)
+	}
+	tags, err := shared.NewTags(values...)
+	if err != nil {
+		return CreatePageResult{}, err
+	}
+	now := time.Now()
+	metadata, err := shared.NewEntityMetadata(now, now)
+	if err != nil {
+		return CreatePageResult{}, err
+	}
+	entity, err := pages.NewPage(handler.ids.Generate(), title, area, tags, metadata)
+	if err != nil {
+		return CreatePageResult{}, err
+	}
+	if err := handler.repository.Save(ctx, entity); err != nil {
+		return CreatePageResult{}, fmt.Errorf("save page: %w", err)
+	}
+	return CreatePageResult{Page: entity}, nil
 }

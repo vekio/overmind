@@ -34,36 +34,53 @@ func (m model) View() tea.View {
 			}
 			fmt.Fprintf(&lines, "%s%-16s %s\n", marker, item.title, item.description)
 		}
+		if m.reindexing {
+			lines.WriteString("\nReindexing notes…")
+		}
 		content = lines.String()
 		controls = []controlHint{{"↑/↓", "move"}, {"enter", "select"}, {"esc/q", "quit"}}
-	case screenForm:
-		content = m.formView()
-		controls = []controlHint{{"tab/↑/↓", "field"}, {"enter", "create"}, {"ctrl+e", "create & edit"}, {"esc", "back"}}
 	case screenAsk:
 		content = m.ask.View()
 		controls = append(m.ask.Controls(), controlHint{"esc/q", "back"})
-	case screenBusy:
-		content = "Working…"
-		controls = []controlHint{{"ctrl+c", "quit"}}
 	case screenNotes:
 		notes := m.notes
 		if m.problem != "" {
 			notes.SetHeight(max(4, notesTableHeight(m.height, m.noteCount)-2))
 		}
-		content = fmt.Sprintf("Overmind / Notes (%d)\n\n%s", m.noteCount, notes.View())
-		if m.noteCount == 0 {
-			content += "\n\nNo notes indexed yet. Create one or rebuild the index."
+		status := fmt.Sprintf("%d notes · page %d · %s", m.noteCount, m.offset/notesPageSize+1, m.filterSummary())
+		if m.loading {
+			status += " · searching…"
 		}
-		controls = []controlHint{{"↑/↓", "move"}, {"enter/e", "edit"}, {"d", "delete"}, {"r", "refresh"}, {"esc/q", "back"}}
+		if m.deleting {
+			status += " · deleting…"
+		}
+		content = fmt.Sprintf("Overmind / Notes (%s)\n\n%s", status, notes.View())
+		if m.noteCount == 0 && !m.loading && m.problem == "" {
+			content += "\n\nNo notes found."
+		}
+		controls = []controlHint{{"↑/↓", "move"}, {"enter/e", "edit"}, {"d", "delete"}, {"f", "filter"}, {"r", "refresh"}, {"n/p", "page"}, {"esc/q", "back"}}
 	}
 	if m.problem != "" {
 		content += "\n\nError: " + m.problem
 	}
 	if len(controls) > 0 {
-		content = withFooter(content, renderControls(controls, m.width), m.height)
+		footerHeight := m.height
+		if m.notification.text != "" {
+			footerHeight--
+		}
+		content = withFooter(content, renderControls(controls, m.width), footerHeight)
 		if m.notification.text != "" {
 			content += "\n" + m.notification.View(m.width)
 		}
+	}
+	if m.filterOpen {
+		modal := m.filterView()
+		canvas := lipgloss.NewCanvas(max(1, m.width), max(1, m.height))
+		canvas.Compose(lipgloss.NewCompositor(
+			lipgloss.NewLayer(content),
+			lipgloss.NewLayer(modal).X(max(0, (m.width-lipgloss.Width(modal))/2)).Y(max(0, (m.height-lipgloss.Height(modal))/2)).Z(1),
+		))
+		content = canvas.Render()
 	}
 	view := tea.NewView(content)
 	view.AltScreen = true

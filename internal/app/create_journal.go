@@ -2,63 +2,71 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain/calendar"
+	"github.com/vekio/overmind/internal/domain/journals"
+	"github.com/vekio/overmind/internal/domain/shared"
 	"github.com/vekio/overmind/internal/ports"
 )
 
-// ErrJournalAlreadyExists indicates that a journal exists for a date.
-var ErrJournalAlreadyExists = errors.New("journal already exists")
+var ErrJournalAlreadyExists = ports.ErrJournalAlreadyExists
 
-// CreateJournalCommand contains the input for creating a journal.
+// CreateJournalCommand accepts an optional YYYY-MM-DD date; empty means today.
 type CreateJournalCommand struct {
-	Tags domain.Tags
+	Date string
+	Tags []string
 }
-
-// CreateJournalResult contains the created journal and its path.
-type CreateJournalResult struct {
-	Journal domain.Journal
-	Path    string
-}
-
-// CreateJournalHandler creates journal notes.
+type CreateJournalResult struct{ Journal *journals.Journal }
 type CreateJournalHandler struct {
-	saver *noteSaver
-	index ports.NoteIndex
-	ids   ports.IDGenerator
+	repository ports.JournalRepository
+	ids        ports.IDGenerator
 }
 
-func newCreateJournalHandler(
-	saver *noteSaver,
-	index ports.NoteIndex,
-	ids ports.IDGenerator,
-) *CreateJournalHandler {
-	return &CreateJournalHandler{saver: saver, index: index, ids: ids}
+func newCreateJournalHandler(repository ports.JournalRepository, ids ports.IDGenerator) *CreateJournalHandler {
+	return &CreateJournalHandler{repository: repository, ids: ids}
 }
-
-// Handle creates, persists and indexes today's journal note.
 func (handler *CreateJournalHandler) Handle(ctx context.Context, command CreateJournalCommand) (CreateJournalResult, error) {
+	if err := ctx.Err(); err != nil {
+		return CreateJournalResult{}, err
+	}
+	if handler.repository == nil || handler.ids == nil {
+		return CreateJournalResult{}, fmt.Errorf("create journal dependencies are not configured")
+	}
+	dateText := strings.TrimSpace(command.Date)
+	if dateText == "" {
+		dateText = time.Now().Format(time.DateOnly)
+	}
+	date, err := calendar.NewDate(dateText)
+	if err != nil {
+		return CreateJournalResult{}, err
+	}
+
+	values := make([]shared.Tag, 0, len(command.Tags))
+	for _, raw := range command.Tags {
+		tag, err := shared.NewTag(raw)
+		if err != nil {
+			return CreateJournalResult{}, err
+		}
+		values = append(values, tag)
+	}
+	tags, err := shared.NewTags(values...)
+	if err != nil {
+		return CreateJournalResult{}, err
+	}
 	now := time.Now()
-	date := domain.DateFromTime(now)
-	exists, err := handler.index.JournalExists(ctx, date)
-	if err != nil {
-		return CreateJournalResult{}, fmt.Errorf("check journal existence: %w", err)
-	}
-	if exists {
-		return CreateJournalResult{}, ErrJournalAlreadyExists
-	}
-
-	journal, err := domain.NewJournal(handler.ids.Generate(), date, command.Tags, now)
+	metadata, err := shared.NewEntityMetadata(now, now)
 	if err != nil {
 		return CreateJournalResult{}, err
 	}
-	path, err := handler.saver.save(ctx, journal)
+	entity, err := journals.NewJournal(handler.ids.Generate(), date, tags, metadata)
 	if err != nil {
 		return CreateJournalResult{}, err
 	}
-
-	return CreateJournalResult{Journal: journal, Path: path}, nil
+	if err := handler.repository.Save(ctx, entity); err != nil {
+		return CreateJournalResult{}, fmt.Errorf("save journal: %w", err)
+	}
+	return CreateJournalResult{Journal: entity}, nil
 }

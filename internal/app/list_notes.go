@@ -3,55 +3,59 @@ package app
 import (
 	"context"
 	"fmt"
-	"slices"
-	"time"
-	"uuid"
+	"strings"
 
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain/shared"
 	"github.com/vekio/overmind/internal/ports"
 )
 
-// ListedNote is the metadata of a note, independent of how clients display it.
-type ListedNote struct {
-	ID         uuid.UUID
-	Kind       domain.NoteKind
-	Attributes map[string]string
-	Tags       []string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+// ListNotesQuery filters the index; zero Limit defaults to 100 notes.
+type ListNotesQuery struct {
+	Type   string
+	Tag    string
+	Limit  int
+	Offset int
 }
 
-// ListNotesResult contains notes ordered by most recent update first.
-type ListNotesResult struct {
-	Notes []ListedNote
+type ListNotesResult struct{ Notes []ports.NoteSummary }
+
+type ListNotesHandler struct{ finder ports.NoteFinder }
+
+func newListNotesHandler(finder ports.NoteFinder) *ListNotesHandler {
+	return &ListNotesHandler{finder: finder}
 }
 
-// ListNotesHandler retrieves note metadata from the index.
-type ListNotesHandler struct {
-	lister ports.NoteLister
-}
-
-func newListNotesHandler(lister ports.NoteLister) *ListNotesHandler {
-	return &ListNotesHandler{lister: lister}
-}
-
-func (handler *ListNotesHandler) Handle(ctx context.Context) (ListNotesResult, error) {
-	records, err := handler.lister.List(ctx)
-	if err != nil {
-		return ListNotesResult{}, fmt.Errorf("list notes: %w", err)
+func (handler *ListNotesHandler) Handle(ctx context.Context, query ListNotesQuery) (ListNotesResult, error) {
+	if err := ctx.Err(); err != nil {
+		return ListNotesResult{}, err
 	}
-	notes := make([]ListedNote, 0, len(records))
-	for _, record := range records {
-		note := ListedNote{
-			ID: record.ID, Kind: record.Kind,
-			CreatedAt: record.CreatedAt, UpdatedAt: record.UpdatedAt,
-			Attributes: make(map[string]string, len(record.Attributes)),
-			Tags:       slices.Clone(record.Tags),
+	kind := strings.ToLower(strings.TrimSpace(query.Type))
+	switch kind {
+	case "", "habit", "person", "bookmark", "inbox", "page", "journal":
+	default:
+		return ListNotesResult{}, fmt.Errorf("unsupported note type %q: use habit, person, bookmark, inbox, page or journal", query.Type)
+	}
+	tag := strings.TrimSpace(query.Tag)
+	if tag != "" {
+		value, err := shared.NewTag(tag)
+		if err != nil {
+			return ListNotesResult{}, err
 		}
-		for _, attribute := range record.Attributes {
-			note.Attributes[attribute.Name] = attribute.Value
-		}
-		notes = append(notes, note)
+		tag = value.String()
+	}
+	if query.Limit < 0 || query.Limit > 1000 || query.Offset < 0 {
+		return ListNotesResult{}, fmt.Errorf("limit must be between 0 and 1000 and offset must be nonnegative")
+	}
+	limit := query.Limit
+	if limit == 0 {
+		limit = 100
+	}
+	if handler.finder == nil {
+		return ListNotesResult{}, fmt.Errorf("note finder is not configured")
+	}
+	notes, err := handler.finder.FindNotes(ctx, ports.NoteFilter{Type: kind, Tag: tag, Limit: limit, Offset: query.Offset})
+	if err != nil {
+		return ListNotesResult{}, fmt.Errorf("find notes: %w", err)
 	}
 	return ListNotesResult{Notes: notes}, nil
 }

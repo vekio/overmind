@@ -1,12 +1,11 @@
 package tui
 
 import (
-	"context"
 	"testing"
 )
 
 func TestOlderNotificationTimerDoesNotDismissNewerMessage(t *testing.T) {
-	m := newModel(context.Background(), &deletingClient{})
+	m := newModel()
 	m.notify("first", notificationInfo)
 	oldID := m.notification.id
 	m.notify("second", notificationSuccess)

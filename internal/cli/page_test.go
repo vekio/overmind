@@ -11,49 +11,56 @@ import (
 	"uuid"
 
 	"github.com/vekio/overmind/internal/app"
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain/pages"
+	"github.com/vekio/overmind/internal/domain/shared"
 )
 
 type pageClient struct {
 	Client
-	title domain.Title
-	area  domain.Area
-	tags  domain.Tags
+	input app.CreatePageCommand
 	calls int
 }
 
-func (client *pageClient) CreatePage(_ context.Context, title domain.Title, area domain.Area, tags domain.Tags) (app.CreatePageResult, error) {
-	client.title, client.area, client.tags = title, area, tags
+func (client *pageClient) CreatePage(_ context.Context, command app.CreatePageCommand) (app.CreatePageResult, error) {
+	client.input = command
 	client.calls++
-	page, err := domain.NewPage(uuid.New(), title, area, tags, time.Now())
-	return app.CreatePageResult{Page: page, Path: "/vault/page.adoc"}, err
+	title, _ := shared.NewTitle(command.Title)
+	now := time.Now()
+	metadata, _ := shared.NewEntityMetadata(now, now)
+	entity, err := pages.NewPage(uuid.MustParse("11111111-1111-4111-8111-111111111111"), title, pages.Area{}, shared.Tags{}, metadata)
+	return app.CreatePageResult{Page: entity}, err
+}
+func TestPageCommandPassesRawInput(t *testing.T) {
+	client := &pageClient{}
+	output := runCLICommand(t, newPageCommand(fixedClient(client)), []string{"page", "--area", "Work/Ideas", "--tag", "One", "--tag", "Two", "A title"}, "")
+	expected := app.CreatePageCommand{Title: "A title", Area: "Work/Ideas", Tags: []string{"One", "Two"}}
+	if client.calls != 1 || !reflect.DeepEqual(client.input, expected) || output != "A title\nID: 11111111-1111-4111-8111-111111111111\n" {
+		t.Fatalf("input=%+v output=%q", client.input, output)
+	}
+}
+func TestPageCommandRequiresOneTitle(t *testing.T) {
+	for _, args := range [][]string{{"page"}, {"page", "A", "title"}} {
+		client := &pageClient{}
+		command := newPageCommand(fixedClient(client))
+		command.Writer = io.Discard
+		if err := command.Run(context.Background(), args); err == nil || client.calls != 0 {
+			t.Fatal("invalid argument count accepted")
+		}
+	}
 }
 
-func TestPageCommandValidatesBeforeCreatingClientAndPassesValues(t *testing.T) {
-	client := &pageClient{}
-	factoryCalls := 0
-	factory := func(context.Context) (Client, error) {
-		factoryCalls++
-		return client, nil
+func TestRootPageCommandPersistsDocumentAndProjection(t *testing.T) {
+	fixture := newCommandFixture(t)
+	note := fixture.create("page", []string{"page", "--area", "Work/Ideas", "--tag", "Reading", "--tag", "Work", "Plan"}, "", []string{"reading", "work"})
+	var title, area string
+	if err := fixture.db().QueryRow("SELECT title,area FROM pages WHERE note_id=?", note.ID.String()).Scan(&title, &area); err != nil || title != "Plan" || area != "work/ideas" {
+		t.Fatalf("page projection=%q %q err=%v", title, area, err)
 	}
-	var output bytes.Buffer
-	command := newPageCommand(factory)
-	command.Writer = &output
-	if err := command.Run(context.Background(), []string{"page", "--area", "Work/Ideas", "--tag", "One", "--tag", "Two", "A title"}); err != nil {
-		t.Fatal(err)
+	if !bytes.HasPrefix(note.Source, []byte("= Plan\n")) || !bytes.Contains(note.Source, []byte(":overmind-area: work/ideas")) {
+		t.Fatalf("page template=%s", note.Source)
 	}
-	if output.String() != "/vault/page.adoc\n" || client.title.String() != "A title" || client.area.String() != "work/ideas" || !reflect.DeepEqual(client.tags.Strings(), []string{"one", "two"}) {
-		t.Fatalf("page command output=%q title=%q area=%q tags=%v", output.String(), client.title, client.area, client.tags.Strings())
+	if _, err := fixture.run([]string{"page", "!!!"}, ""); !errors.Is(err, shared.ErrInvalidTitle) {
+		t.Fatalf("invalid title=%v", err)
 	}
-	if client.calls != 1 || factoryCalls != 1 {
-		t.Fatalf("page calls=%d factory calls=%d", client.calls, factoryCalls)
-	}
-	command = newPageCommand(factory)
-	command.Writer = io.Discard
-	if err := command.Run(context.Background(), []string{"page", "--tag", "same", "--tag", "same", "A title"}); !errors.Is(err, domain.ErrDuplicateTag) {
-		t.Fatalf("duplicate tags = %v", err)
-	}
-	if factoryCalls != 1 {
-		t.Fatal("client created for invalid page input")
-	}
+	fixture.requireSingleNote()
 }

@@ -1,10 +1,10 @@
 version: "2"
 sql:
   - engine: sqlite
-    schema: internal/infra/sqliteindex/migrations
-    queries: internal/infra/sqliteindex/queries
+    schema: internal/infra/index/schema.sql
+    queries: internal/infra/index/queries
     gen:
       go:
         package: sqlitedb
-        out: internal/infra/sqliteindex/sqlitedb
+        out: internal/infra/index/sqlitedb
         emit_db_tags: true

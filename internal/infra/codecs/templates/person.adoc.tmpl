@@ -1,0 +1,16 @@
+{{ define "person" -}}
+= {{ .Name }}
+:overmind-id: {{ .ID }}
+:overmind-type: {{ personKind }}
+:overmind-groups: {{ groups .Groups }}
+:overmind-tags: {{ tags .Tags }}
+:overmind-created-at: {{ timestamp .Metadata.CreatedAt }}
+:overmind-updated-at: {{ timestamp .Metadata.UpdatedAt }}
+
+== Contact
+
+== Context
+
+== Notes
+
+{{ end -}}

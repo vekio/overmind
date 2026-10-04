@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/app"
 )
 
 func newPageCommand(newClient ClientFactory) *urfavecli.Command {
@@ -31,33 +31,15 @@ func newPageCommand(newClient ClientFactory) *urfavecli.Command {
 				return fmt.Errorf("unexpected arguments after title: %q", command.Args().Slice())
 			}
 
-			title, err := domain.NewTitle(titleArguments[0])
-			if err != nil {
-				return err
-			}
-
-			var area domain.Area
-			if value := command.String("area"); value != "" {
-				area, err = domain.NewArea(value)
-				if err != nil {
-					return err
-				}
-			}
-
-			tags, err := parseTags(command.StringSlice("tag"))
-			if err != nil {
-				return err
-			}
-
 			client, err := newClient(ctx)
 			if err != nil {
 				return err
 			}
-			result, err := client.CreatePage(ctx, title, area, tags)
+			result, err := client.CreatePage(ctx, app.CreatePageCommand{Title: titleArguments[0], Area: command.String("area"), Tags: command.StringSlice("tag")})
 			if err != nil {
 				return err
 			}
-			if _, err := fmt.Fprintln(command.Writer, result.Path); err != nil {
+			if _, err := fmt.Fprintf(command.Writer, "%s\nID: %s\n", result.Page.Summary(), result.Page.ID()); err != nil {
 				return fmt.Errorf("write created page location: %w", err)
 			}
 			return nil

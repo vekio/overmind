@@ -2,44 +2,61 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain/bookmarks"
+	"github.com/vekio/overmind/internal/domain/shared"
 	"github.com/vekio/overmind/internal/ports"
 )
 
-// CreateBookmarkCommand contains the input for creating a bookmark.
 type CreateBookmarkCommand struct {
-	URL  domain.URL
-	Tags domain.Tags
+	URL  string
+	Tags []string
 }
-
-// CreateBookmarkResult contains the created bookmark and its path.
-type CreateBookmarkResult struct {
-	Bookmark domain.Bookmark
-	Path     string
-}
-
-// CreateBookmarkHandler creates bookmark notes.
+type CreateBookmarkResult struct{ Bookmark *bookmarks.Bookmark }
 type CreateBookmarkHandler struct {
-	saver *noteSaver
-	ids   ports.IDGenerator
+	repository ports.BookmarkRepository
+	ids        ports.IDGenerator
 }
 
-func newCreateBookmarkHandler(saver *noteSaver, ids ports.IDGenerator) *CreateBookmarkHandler {
-	return &CreateBookmarkHandler{saver: saver, ids: ids}
+func newCreateBookmarkHandler(repository ports.BookmarkRepository, ids ports.IDGenerator) *CreateBookmarkHandler {
+	return &CreateBookmarkHandler{repository: repository, ids: ids}
 }
-
-// Handle creates, persists and indexes a bookmark.
 func (handler *CreateBookmarkHandler) Handle(ctx context.Context, command CreateBookmarkCommand) (CreateBookmarkResult, error) {
-	bookmark, err := domain.NewBookmark(handler.ids.Generate(), command.URL, command.Tags, time.Now())
+	if err := ctx.Err(); err != nil {
+		return CreateBookmarkResult{}, err
+	}
+	if handler.repository == nil || handler.ids == nil {
+		return CreateBookmarkResult{}, fmt.Errorf("create bookmark dependencies are not configured")
+	}
+	value, err := bookmarks.NewURL(command.URL)
 	if err != nil {
 		return CreateBookmarkResult{}, err
 	}
-	path, err := handler.saver.save(ctx, bookmark)
+	values := make([]shared.Tag, 0, len(command.Tags))
+	for _, raw := range command.Tags {
+		tag, err := shared.NewTag(raw)
+		if err != nil {
+			return CreateBookmarkResult{}, err
+		}
+		values = append(values, tag)
+	}
+	tags, err := shared.NewTags(values...)
 	if err != nil {
 		return CreateBookmarkResult{}, err
 	}
-
-	return CreateBookmarkResult{Bookmark: bookmark, Path: path}, nil
+	now := time.Now()
+	metadata, err := shared.NewEntityMetadata(now, now)
+	if err != nil {
+		return CreateBookmarkResult{}, err
+	}
+	entity, err := bookmarks.NewBookmark(handler.ids.Generate(), value, tags, metadata)
+	if err != nil {
+		return CreateBookmarkResult{}, err
+	}
+	if err := handler.repository.Save(ctx, entity); err != nil {
+		return CreateBookmarkResult{}, fmt.Errorf("save bookmark: %w", err)
+	}
+	return CreateBookmarkResult{Bookmark: entity}, nil
 }

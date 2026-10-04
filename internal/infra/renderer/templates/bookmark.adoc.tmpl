@@ -1,9 +1,0 @@
-{{ define "bookmark" -}}
-:overmind-id: {{ .Metadata.ID }}
-:overmind-type: {{ .Metadata.Kind }}
-:overmind-url: {{ .URL }}
-:overmind-tags:{{ with .Metadata.Tags.Strings }} {{ comma . }}{{ end }}
-:overmind-created-at: {{ rfc3339 .Metadata.CreatedAt }}
-:overmind-updated-at: {{ rfc3339 .Metadata.UpdatedAt }}
-
-{{ end -}}

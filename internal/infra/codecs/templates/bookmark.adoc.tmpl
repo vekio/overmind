@@ -1,0 +1,8 @@
+{{ define "bookmark" }}:overmind-id: {{ .ID }}
+:overmind-type: {{ bookmarkKind }}
+:overmind-url: {{ .URL }}
+:overmind-tags: {{ tags .Tags }}
+:overmind-created-at: {{ timestamp .Metadata.CreatedAt }}
+:overmind-updated-at: {{ timestamp .Metadata.UpdatedAt }}
+
+{{ end }}

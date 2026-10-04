@@ -10,38 +10,53 @@ import (
 
 	urfavecli "github.com/urfave/cli/v3"
 	"github.com/vekio/overmind/internal/app"
-	"github.com/vekio/overmind/internal/domain"
+	"github.com/vekio/overmind/internal/domain/bookmarks"
+	"github.com/vekio/overmind/internal/domain/calendar"
+	"github.com/vekio/overmind/internal/domain/inbox"
+	"github.com/vekio/overmind/internal/domain/journals"
+	"github.com/vekio/overmind/internal/domain/shared"
 )
 
 type otherCommandsClient struct {
 	Client
-	bookmarkURL domain.URL
-	journalTags domain.Tags
-	captureText string
-	rebuilds    int
+	bookmarkURL  string
+	bookmarkTags []string
+	inboxTags    []string
+	journalTags  []string
+	inboxContent string
 }
 
-func (client *otherCommandsClient) CreateBookmark(_ context.Context, url domain.URL, tags domain.Tags) (app.CreateBookmarkResult, error) {
-	client.bookmarkURL = url
-	bookmark, err := domain.NewBookmark(uuid.New(), url, tags, time.Now())
-	return app.CreateBookmarkResult{Bookmark: bookmark, Path: "/vault/bookmark.adoc"}, err
+func (client *otherCommandsClient) CreateBookmark(_ context.Context, command app.CreateBookmarkCommand) (app.CreateBookmarkResult, error) {
+	client.bookmarkURL, client.bookmarkTags = command.URL, command.Tags
+	url, err := bookmarks.NewURL(command.URL)
+	if err != nil {
+		return app.CreateBookmarkResult{}, err
+	}
+	now := time.Now()
+	metadata, _ := shared.NewEntityMetadata(now, now)
+	bookmark, err := bookmarks.NewBookmark(uuid.MustParse("11111111-1111-4111-8111-111111111111"), url, shared.Tags{}, metadata)
+	return app.CreateBookmarkResult{Bookmark: bookmark}, err
 }
 
-func (client *otherCommandsClient) CreateJournal(_ context.Context, tags domain.Tags) (app.CreateJournalResult, error) {
-	client.journalTags = tags
-	journal, err := domain.NewJournal(uuid.New(), domain.DateFromTime(time.Now()), tags, time.Now())
-	return app.CreateJournalResult{Journal: journal, Path: "/vault/journal.adoc"}, err
+func (client *otherCommandsClient) CreateJournal(_ context.Context, command app.CreateJournalCommand) (app.CreateJournalResult, error) {
+	client.journalTags = command.Tags
+	text := command.Date
+	if text == "" {
+		text = "2026-10-04"
+	}
+	date, _ := calendar.NewDate(text)
+	now := time.Now()
+	metadata, _ := shared.NewEntityMetadata(now, now)
+	entity, err := journals.NewJournal(uuid.MustParse("11111111-1111-4111-8111-111111111111"), date, shared.Tags{}, metadata)
+	return app.CreateJournalResult{Journal: entity}, err
 }
 
-func (client *otherCommandsClient) Capture(_ context.Context, content string) (app.CaptureResult, error) {
-	client.captureText = content
-	inbox, err := domain.NewInbox(uuid.New(), content, time.Now())
-	return app.CaptureResult{Inbox: inbox, Path: "/vault/inbox.adoc"}, err
-}
-
-func (client *otherCommandsClient) RebuildIndex(context.Context) (int, error) {
-	client.rebuilds++
-	return 3, nil
+func (client *otherCommandsClient) CreateInbox(_ context.Context, command app.CreateInboxCommand) (app.CreateInboxResult, error) {
+	client.inboxContent, client.inboxTags = command.Content, command.Tags
+	now := time.Now()
+	metadata, _ := shared.NewEntityMetadata(now, now)
+	note, err := inbox.NewInbox(uuid.MustParse("11111111-1111-4111-8111-111111111111"), command.Content, shared.Tags{}, metadata)
+	return app.CreateInboxResult{Inbox: note}, err
 }
 
 func runCLICommand(t *testing.T, command *urfavecli.Command, args []string, input string) string {

@@ -3,46 +3,37 @@ package tui
 type action uint8
 
 const (
-	actionCapture action = iota
-	actionPage
-	actionBookmark
-	actionJournal
-	actionRebuild
-	actionList
+	actionList action = iota
+	actionInbox
+	actionHabit
 	actionPerson
+	actionBookmark
+	actionPage
+	actionJournal
+	actionReindex
 )
 
 func (a action) String() string {
-	switch a {
-	case actionPerson:
-		return "Person"
-	case actionPage:
-		return "Page"
-	case actionBookmark:
-		return "Bookmark"
-	case actionJournal:
-		return "Journal"
-	case actionRebuild:
-		return "Rebuild index"
-	case actionList:
-		return "Notes"
-	default:
-		return "Capture"
+	for _, item := range menuItems {
+		if item.action == a {
+			return item.title
+		}
 	}
+	return "Unknown"
 }
 
 type menuItem struct {
-	action      action
-	title       string
-	description string
+	action             action
+	title, description string
 }
 
 var menuItems = []menuItem{
-	{actionList, "Notes", "Browse indexed notes"},
-	{actionCapture, "Capture", "Create an inbox note and edit it in Neovim"},
-	{actionPage, "Page", "Create a page, optionally inside an area"},
+	{actionList, "Notes", "Browse and filter saved notes"},
+	{actionInbox, "Inbox", "Create a quick note"},
+	{actionHabit, "Habit", "Define a habit"},
+	{actionPerson, "Person", "Create a person note"},
 	{actionBookmark, "Bookmark", "Save a web address"},
-	{actionJournal, "Journal", "Open today's journal editor"},
-	{actionRebuild, "Rebuild index", "Index the AsciiDoc notes in the vault"},
-	{actionPerson, "Person", "Create a person and organize them in groups"},
+	{actionPage, "Page", "Create a titled note"},
+	{actionJournal, "Journal", "Create a daily entry"},
+	{actionReindex, "Reindex", "Rebuild the index from note files"},
 }

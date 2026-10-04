@@ -1,0 +1,12 @@
+{{ define "habit" -}}
+= {{ .Title }}
+:overmind-id: {{ .ID }}
+:overmind-type: {{ habitKind }}
+:overmind-amount: {{ number .Goal.Amount }}
+:overmind-unit: {{ .Goal.Unit }}
+:overmind-period: {{ .Goal.Period }}
+:overmind-tags: {{ tags .Tags }}
+:overmind-created-at: {{ timestamp .Metadata.CreatedAt }}
+:overmind-updated-at: {{ timestamp .Metadata.UpdatedAt }}
+
+{{ end -}}
