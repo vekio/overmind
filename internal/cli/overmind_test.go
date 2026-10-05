@@ -26,7 +26,7 @@ func TestOvermindRegistersCreationCommandsAndDropsRetiredNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := New(config, fixedClient(&otherCommandsClient{}))
-	for _, name := range []string{"habit", "person", "bookmark", "inbox", "page", "journal", "list", "reindex", "delete"} {
+	for _, name := range []string{"habit", "person", "bookmark", "inbox", "page", "journal", "list", "reindex", "delete", "setup"} {
 		if root.Command(name) == nil {
 			t.Fatalf("missing creation command %q", name)
 		}

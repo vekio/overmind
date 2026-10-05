@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/habit"
 	appconfig "github.com/vekio/overmind/internal/config"
 	"github.com/vekio/overmind/internal/infra/index/sqlitedb"
 )
@@ -20,7 +20,7 @@ func TestBuildApplicationPersistsHabitAcrossRestarts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	created, err := application.Commands.CreateHabit.Handle(ctx, app.CreateHabitCommand{Title: "Beber agua", Amount: 2, Unit: "litros", Period: "day"})
+	created, err := application.Commands.CreateHabit.Handle(ctx, habit.CreateCommand{Title: "Beber agua", Amount: 2, Unit: "litros", Period: "day"})
 	if err != nil {
 		for _, closer := range closers {
 			_ = closer.Close()

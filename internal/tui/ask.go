@@ -52,6 +52,7 @@ func newAsk(question string, defaultOption askOptionID, options ...askOption) as
 	return a
 }
 
+// Update wraps option selection and emits an answer only on confirmation or a shortcut.
 func (a ask) Update(message tea.Msg) (ask, tea.Cmd) {
 	key, ok := message.(tea.KeyPressMsg)
 	if !ok {
@@ -81,6 +82,7 @@ func (a ask) Update(message tea.Msg) (ask, tea.Cmd) {
 	return a, nil
 }
 
+// View renders the question and highlights the selected option.
 func (a ask) View() string {
 	buttons := make([]string, 0, len(a.options))
 	for index, option := range a.options {
@@ -94,6 +96,7 @@ func (a ask) View() string {
 	return askQuestionStyle.Render(a.question) + "\n\n" + strings.Join(buttons, "   ")
 }
 
+// Controls returns navigation hints and configured option shortcuts.
 func (a ask) Controls() []controlHint {
 	controls := []controlHint{{"←/→", "choose"}, {"enter", "confirm"}}
 	for _, option := range a.options {

@@ -27,7 +27,8 @@ func New(configFile *configlib.ConfigFile[appconfig.Settings]) *Runtime {
 	return &Runtime{configFile: configFile}
 }
 
-// Application returns the configured application, creating it when first needed.
+// Application lazily loads configuration and builds one shared application.
+// Initialization is serialized; canceled callers do not load configuration or create resources.
 func (runtime *Runtime) Application(ctx context.Context) (*app.Application, error) {
 	runtime.mutex.Lock()
 	defer runtime.mutex.Unlock()
@@ -52,7 +53,8 @@ func (runtime *Runtime) Application(ctx context.Context) (*app.Application, erro
 	return runtime.application, nil
 }
 
-// Close releases the configured application resources.
+// Close releases resources in reverse construction order and joins all close errors.
+// Repeated calls do not close the same resources twice. Close ends the runtime lifecycle.
 func (runtime *Runtime) Close() error {
 	runtime.mutex.Lock()
 	defer runtime.mutex.Unlock()

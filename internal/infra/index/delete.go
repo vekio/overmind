@@ -4,11 +4,7 @@ import (
 	"context"
 	"fmt"
 	"uuid"
-
-	"github.com/vekio/overmind/internal/ports"
 )
-
-var _ ports.NoteIndexDeleter = (*Index)(nil)
 
 // Delete relies on foreign-key cascades to remove specialized data, note tags
 // and person groups while preserving shared tag and group definitions.

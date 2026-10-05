@@ -7,10 +7,11 @@ import (
 	"uuid"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/notes"
 )
 
-type DeleteNoteFunc func(context.Context, app.DeleteNoteCommand) (app.DeleteNoteResult, error)
+// DeleteNoteFunc removes the selected source document and its index projection.
+type DeleteNoteFunc func(context.Context, notes.DeleteCommand) (notes.DeleteResult, error)
 type deleteFinished struct {
 	id  uuid.UUID
 	err error
@@ -41,7 +42,7 @@ func (m model) runDelete() tea.Cmd {
 		if m.deleteNote == nil {
 			return deleteFinished{id: id, err: fmt.Errorf("note deletion is not configured")}
 		}
-		_, err := m.deleteNote(m.ctx, app.DeleteNoteCommand{ID: id.String()})
+		_, err := m.deleteNote(m.ctx, notes.DeleteCommand{ID: id.String()})
 		return deleteFinished{id: id, err: err}
 	}
 }

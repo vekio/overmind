@@ -12,17 +12,25 @@ import (
 
 var _ ports.HabitRepository = (*HabitRepository)(nil)
 
+// HabitRepository stores managed habit documents and their derived index entries.
 type HabitRepository struct {
 	notes ports.NoteStore
 	index ports.Index
 	codec ports.HabitCodec
 }
 
+// NewHabitRepository binds source storage, index and typed document codec.
 func NewHabitRepository(notes ports.NoteStore, index ports.Index, codec ports.HabitCodec) *HabitRepository {
 	return &HabitRepository{notes: notes, index: index, codec: codec}
 }
 
+// Save writes the habit document before updating its index projection.
+// An indexing error can occur after the document has been saved.
 func (repository *HabitRepository) Save(ctx context.Context, habit *habits.Habit) error {
+	return repository.persist(ctx, habit)
+}
+
+func (repository *HabitRepository) persist(ctx context.Context, habit *habits.Habit) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -43,6 +51,7 @@ func (repository *HabitRepository) Save(ctx context.Context, habit *habits.Habit
 	return nil
 }
 
+// ByID decodes the authoritative source and verifies its habit kind and UUID.
 func (repository *HabitRepository) ByID(ctx context.Context, id uuid.UUID) (*habits.Habit, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -67,8 +76,24 @@ func (repository *HabitRepository) ByID(ctx context.Context, id uuid.UUID) (*hab
 	if err != nil {
 		return nil, fmt.Errorf("map habit note: %w", err)
 	}
-	if habit.ID() != id {
+	if habit == nil || habit.ID() != id {
 		return nil, fmt.Errorf("habit note ID does not match requested ID")
 	}
 	return habit, nil
+}
+
+// Update requires an existing habit and preserves its creation time.
+// It re-encodes the document before refreshing the projection.
+func (repository *HabitRepository) Update(ctx context.Context, entity *habits.Habit) error {
+	if entity == nil || repository.index == nil {
+		return fmt.Errorf("habit and repository dependencies are required")
+	}
+	existing, err := repository.ByID(ctx, entity.ID())
+	if err != nil {
+		return err
+	}
+	if !existing.Metadata().CreatedAt().Equal(entity.Metadata().CreatedAt()) {
+		return fmt.Errorf("habit creation time cannot change")
+	}
+	return repository.persist(ctx, entity)
 }

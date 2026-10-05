@@ -14,6 +14,7 @@ type Goal struct {
 	period calendar.Period
 }
 
+// NewGoal requires a finite positive amount, an initialized unit and a supported period.
 func NewGoal(amount float64, unit Unit, period calendar.Period) (Goal, error) {
 	goal := Goal{amount: amount, unit: unit, period: period}
 	if err := goal.validate(); err != nil {
@@ -35,6 +36,11 @@ func (goal Goal) validate() error {
 	return nil
 }
 
-func (goal Goal) Amount() float64         { return goal.amount }
-func (goal Goal) Unit() Unit              { return goal.unit }
+// Amount returns the required quantity per period.
+func (goal Goal) Amount() float64 { return goal.amount }
+
+// Unit returns the literal measurement label.
+func (goal Goal) Unit() Unit { return goal.unit }
+
+// Period returns the calendar period to which the target applies.
 func (goal Goal) Period() calendar.Period { return goal.period }

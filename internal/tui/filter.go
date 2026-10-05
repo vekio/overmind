@@ -9,21 +9,21 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/notes"
 )
 
 // ListNotesFunc lets the TUI query notes through a local or remote client.
-type ListNotesFunc func(context.Context, app.ListNotesQuery) (app.ListNotesResult, error)
+type ListNotesFunc func(context.Context, notes.ListQuery) (notes.ListResult, error)
 
 const notesPageSize = 100
 
 type loadNotes struct {
 	revision uint64
-	query    app.ListNotesQuery
+	query    notes.ListQuery
 }
 type notesLoaded struct {
 	revision uint64
-	result   app.ListNotesResult
+	result   notes.ListResult
 	err      error
 }
 
@@ -42,11 +42,13 @@ func newFilterInputs() [2]textinput.Model {
 	return inputs
 }
 
+// requestNotes snapshots filters and pagination. The revision rejects results
+// and delayed requests superseded by a newer search.
 func (m *model) requestNotes(delay time.Duration) tea.Cmd {
 	m.revision++
 	m.loading = true
 	m.problem = ""
-	message := loadNotes{revision: m.revision, query: app.ListNotesQuery{
+	message := loadNotes{revision: m.revision, query: notes.ListQuery{
 		Type: m.filters[0].Value(), Tag: m.filters[1].Value(), Limit: notesPageSize + 1, Offset: m.offset,
 	}}
 	if delay > 0 {

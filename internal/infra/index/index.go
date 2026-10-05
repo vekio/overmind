@@ -1,4 +1,5 @@
-// Package index implements the note index using the current note projections.
+// Package index maintains searchable SQLite projections derived from vault documents.
+// It never rewrites source documents; rebuilds replace projections transactionally.
 package index
 
 import (
@@ -31,12 +32,16 @@ var schema string
 
 var _ ports.Index = (*Index)(nil)
 
+// Index stores derived projections in SQLite. Rebuild uses a scoped transaction
+// so nested projection writes cannot commit the replacement early.
 type Index struct {
 	db          *sql.DB
 	queries     *sqlitedb.Queries
 	transaction *sql.Tx
 }
 
+// New opens SQLite, enables foreign keys and initializes the index schema.
+// The caller owns Close; :memory: creates a transient database.
 func New(ctx context.Context, path string) (*Index, error) {
 	if path == "" {
 		return nil, fmt.Errorf("index path is required")
@@ -60,6 +65,8 @@ func New(ctx context.Context, path string) (*Index, error) {
 	return &Index{db: db, queries: sqlitedb.New(db)}, nil
 }
 
+// UpsertHabit replaces metadata, typed fields and associations in one transaction.
+// The path refers to a source document already saved by the caller.
 func (index *Index) UpsertHabit(ctx context.Context, habit *habits.Habit, path string) error {
 	if habit == nil || habit.ID() == uuid.Nil() {
 		return fmt.Errorf("initialized habit is required")
@@ -100,6 +107,8 @@ func (index *Index) UpsertHabit(ctx context.Context, habit *habits.Habit, path s
 	return nil
 }
 
+// UpsertPerson replaces metadata, typed fields and associations in one transaction.
+// The path refers to a source document already saved by the caller.
 func (index *Index) UpsertPerson(ctx context.Context, person *persons.Person, path string) error {
 	if person == nil || person.ID() == uuid.Nil() {
 		return fmt.Errorf("initialized person is required")
@@ -151,6 +160,8 @@ func (index *Index) UpsertPerson(ctx context.Context, person *persons.Person, pa
 	return nil
 }
 
+// UpsertBookmark replaces metadata, typed fields and associations in one transaction.
+// The path refers to a source document already saved by the caller.
 func (index *Index) UpsertBookmark(ctx context.Context, entity *bookmarks.Bookmark, path string) error {
 	if entity == nil || entity.ID() == uuid.Nil() {
 		return fmt.Errorf("initialized entity is required")
@@ -191,6 +202,8 @@ func (index *Index) UpsertBookmark(ctx context.Context, entity *bookmarks.Bookma
 	return nil
 }
 
+// UpsertInbox replaces metadata, typed fields and associations in one transaction.
+// The path refers to a source document already saved by the caller.
 func (index *Index) UpsertInbox(ctx context.Context, entity *inbox.Inbox, path string) error {
 	if entity == nil || entity.ID() == uuid.Nil() {
 		return fmt.Errorf("initialized entity is required")
@@ -231,8 +244,11 @@ func (index *Index) UpsertInbox(ctx context.Context, entity *inbox.Inbox, path s
 	return nil
 }
 
+// Close releases the SQLite connection pool.
 func (index *Index) Close() error { return index.db.Close() }
 
+// UpsertPage replaces metadata, typed fields and associations in one transaction.
+// The path refers to a source document already saved by the caller.
 func (index *Index) UpsertPage(ctx context.Context, entity *pages.Page, path string) error {
 	if entity == nil || entity.ID() == uuid.Nil() {
 		return fmt.Errorf("initialized entity is required")
@@ -273,6 +289,8 @@ func (index *Index) UpsertPage(ctx context.Context, entity *pages.Page, path str
 	return nil
 }
 
+// UpsertJournal replaces metadata, typed fields and associations in one transaction.
+// The path refers to a source document already saved by the caller.
 func (index *Index) UpsertJournal(ctx context.Context, entity *journals.Journal, path string) error {
 	if entity == nil || entity.ID() == uuid.Nil() {
 		return fmt.Errorf("initialized entity is required")
@@ -317,6 +335,7 @@ func (index *Index) UpsertJournal(ctx context.Context, entity *journals.Journal,
 	return nil
 }
 
+// JournalExists rejects uninitialized dates and checks the indexed journal date.
 func (index *Index) JournalExists(ctx context.Context, date calendar.Date) (bool, error) {
 	if date.IsZero() {
 		return false, fmt.Errorf("journal date is required")

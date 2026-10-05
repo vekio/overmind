@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// ErrInvalidDate identifies an invalid YYYY-MM-DD calendar value.
 var ErrInvalidDate = errors.New("invalid date")
 
 // Date is a value object representing a calendar date without a time or timezone. Internally it uses UTC
@@ -15,6 +16,7 @@ type Date struct {
 	initialized bool
 }
 
+// NewDate parses an exact YYYY-MM-DD value without a timezone.
 func NewDate(value string) (Date, error) {
 	parsed, err := time.Parse(time.DateOnly, value)
 	if err != nil {
@@ -23,6 +25,7 @@ func NewDate(value string) (Date, error) {
 	return Date{value: parsed, initialized: true}, nil
 }
 
+// String formats the date as YYYY-MM-DD.
 func (date Date) String() string { return date.value.Format(time.DateOnly) }
 
 // IsZero reports whether the date is uninitialized. The initialization flag

@@ -10,30 +10,30 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/page"
 	"github.com/vekio/overmind/internal/domain/pages"
 	"github.com/vekio/overmind/internal/domain/shared"
 )
 
 type pageClient struct {
 	Client
-	input app.CreatePageCommand
+	input page.CreateCommand
 	calls int
 }
 
-func (client *pageClient) CreatePage(_ context.Context, command app.CreatePageCommand) (app.CreatePageResult, error) {
+func (client *pageClient) CreatePage(_ context.Context, command page.CreateCommand) (page.CreateResult, error) {
 	client.input = command
 	client.calls++
 	title, _ := shared.NewTitle(command.Title)
 	now := time.Now()
 	metadata, _ := shared.NewEntityMetadata(now, now)
 	entity, err := pages.NewPage(uuid.MustParse("11111111-1111-4111-8111-111111111111"), title, pages.Area{}, shared.Tags{}, metadata)
-	return app.CreatePageResult{Page: entity}, err
+	return page.CreateResult{Page: entity}, err
 }
 func TestPageCommandPassesRawInput(t *testing.T) {
 	client := &pageClient{}
 	output := runCLICommand(t, newPageCommand(fixedClient(client)), []string{"page", "--area", "Work/Ideas", "--tag", "One", "--tag", "Two", "A title"}, "")
-	expected := app.CreatePageCommand{Title: "A title", Area: "Work/Ideas", Tags: []string{"One", "Two"}}
+	expected := page.CreateCommand{Title: "A title", Area: "Work/Ideas", Tags: []string{"One", "Two"}}
 	if client.calls != 1 || !reflect.DeepEqual(client.input, expected) || output != "A title\nID: 11111111-1111-4111-8111-111111111111\n" {
 		t.Fatalf("input=%+v output=%q", client.input, output)
 	}

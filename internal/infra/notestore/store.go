@@ -16,8 +16,10 @@ import (
 
 var _ ports.NoteStore = (*Store)(nil)
 
+// Store maps UUIDs to managed documents under one filesystem root.
 type Store struct{ root string }
 
+// New binds a storage root without creating directories or reading documents.
 func New(root string) *Store { return &Store{root: root} }
 func (store *Store) path(ctx context.Context, id uuid.UUID) (string, error) {
 	if err := ctx.Err(); err != nil {
@@ -28,6 +30,9 @@ func (store *Store) path(ctx context.Context, id uuid.UUID) (string, error) {
 	}
 	return filepath.Join(store.root, id.String()+".adoc"), nil
 }
+
+// Put atomically writes exact source bytes to the canonical UUID filename.
+// The supplied Path is ignored; the returned path identifies the persisted file.
 func (store *Store) Put(ctx context.Context, note ports.Note) (string, error) {
 	path, err := store.path(ctx, note.ID)
 	if err != nil {
@@ -41,6 +46,9 @@ func (store *Store) Put(ctx context.Context, note ports.Note) (string, error) {
 	}
 	return path, nil
 }
+
+// Get reads the canonical UUID filename and preserves its bytes without decoding.
+// Missing files return ports.ErrNoteNotFound.
 func (store *Store) Get(ctx context.Context, id uuid.UUID) (ports.Note, error) {
 	path, err := store.path(ctx, id)
 	if err != nil {

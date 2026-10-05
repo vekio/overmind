@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/page"
 )
 
 func newPageCommand(newClient ClientFactory) *urfavecli.Command {
@@ -13,17 +13,10 @@ func newPageCommand(newClient ClientFactory) *urfavecli.Command {
 		Name:      "page",
 		Usage:     "create a page note",
 		ArgsUsage: "TITLE",
-		Arguments: []urfavecli.Argument{
-			&urfavecli.StringArgs{
-				Name:      "title",
-				UsageText: "TITLE",
-				Min:       1,
-				Max:       1,
-			},
-		},
+		Arguments: titleArgument(),
 		Flags: []urfavecli.Flag{
-			areaFlag("organize under `AREA`"),
-			tagFlag("add `TAG`; repeatable"),
+			areaFlag(),
+			tagFlag(),
 		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			titleArguments := command.StringArgs("title")
@@ -35,7 +28,7 @@ func newPageCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			result, err := client.CreatePage(ctx, app.CreatePageCommand{Title: titleArguments[0], Area: command.String("area"), Tags: command.StringSlice("tag")})
+			result, err := client.CreatePage(ctx, page.CreateCommand{Title: titleArguments[0], Area: command.String("area"), Tags: command.StringSlice("tag")})
 			if err != nil {
 				return err
 			}

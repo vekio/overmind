@@ -4,29 +4,33 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"charm.land/huh/v2"
 	urfavecli "github.com/urfave/cli/v3"
 	configlib "github.com/vekio/config"
 	appconfig "github.com/vekio/overmind/internal/config"
+	"github.com/vekio/overmind/internal/tui"
 )
 
-type vaultPrompt func(context.Context, string) (string, error)
+type settingsPrompt func(context.Context, appconfig.Settings) (appconfig.Settings, error)
 
-// NewSetupCommand creates the interactive configuration command.
+// NewSetupCommand creates the interactive initial configuration command.
 func NewSetupCommand(configFile *configlib.ConfigFile[appconfig.Settings]) *urfavecli.Command {
-	return newSetupCommand(configFile, promptVault)
+	return newSetupCommand(configFile, func(ctx context.Context, defaults appconfig.Settings) (appconfig.Settings, error) {
+		return tui.RunSetup(ctx, defaults, configFile.Path())
+	})
 }
 
-func newSetupCommand(configFile *configlib.ConfigFile[appconfig.Settings], prompt vaultPrompt) *urfavecli.Command {
+func newSetupCommand(configFile *configlib.ConfigFile[appconfig.Settings], prompt settingsPrompt) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:  "setup",
-		Usage: "configure Overmind interactively",
+		Usage: "create the initial configuration interactively",
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			if command.NArg() != 0 {
 				return fmt.Errorf("unexpected arguments: %q", command.Args().Slice())
+			}
+			if err := ctx.Err(); err != nil {
+				return err
 			}
 			if _, err := os.Stat(configFile.Path()); err == nil {
 				return fmt.Errorf("configuration already exists at %q", configFile.Path())
@@ -34,15 +38,24 @@ func newSetupCommand(configFile *configlib.ConfigFile[appconfig.Settings], promp
 				return fmt.Errorf("inspect configuration file: %w", err)
 			}
 
-			vault, err := prompt(ctx, configFile.Defaults().VaultPath)
+			settings, err := prompt(ctx, configFile.Defaults())
 			if err != nil {
 				return fmt.Errorf("setup: %w", err)
 			}
-			vault, err = normalizeVaultPath(vault)
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			settings.Mode = appconfig.Mode(strings.TrimSpace(string(settings.Mode)))
+			if settings.Mode == "" {
+				settings.Mode = appconfig.ModeLocal
+			}
+			settings.VaultPath, err = appconfig.NormalizeVaultPath(settings.VaultPath)
 			if err != nil {
 				return err
 			}
-			settings := appconfig.Settings{Mode: appconfig.ModeLocal, VaultPath: vault}
+			if err := settings.Validate(); err != nil {
+				return err
+			}
 			if err := configFile.Create(settings); err != nil {
 				return fmt.Errorf("create configuration: %w", err)
 			}
@@ -50,54 +63,4 @@ func newSetupCommand(configFile *configlib.ConfigFile[appconfig.Settings], promp
 			return err
 		},
 	}
-}
-
-func promptVault(ctx context.Context, defaultPath string) (string, error) {
-	vault := defaultPath
-	form := huh.NewForm(huh.NewGroup(
-		huh.NewInput().
-			Title("Vault directory").
-			Description("Directory where Overmind stores notes and its index").
-			Value(&vault).
-			Validate(func(value string) error {
-				_, err := normalizeVaultPath(value)
-				return err
-			}),
-	))
-	if err := form.RunWithContext(ctx); err != nil {
-		return "", err
-	}
-	return vault, nil
-}
-
-func normalizeVaultPath(value string) (string, error) {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "", fmt.Errorf("vault directory is required")
-	}
-	if value == "~" || strings.HasPrefix(value, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("resolve home directory: %w", err)
-		}
-		if value == "~" {
-			value = home
-		} else {
-			value = filepath.Join(home, strings.TrimPrefix(value, "~/"))
-		}
-	} else if strings.HasPrefix(value, "~") {
-		return "", fmt.Errorf("vault directory cannot use another user's home")
-	}
-	path, err := filepath.Abs(value)
-	if err != nil {
-		return "", fmt.Errorf("resolve vault directory: %w", err)
-	}
-	if info, err := os.Stat(path); err == nil {
-		if !info.IsDir() {
-			return "", fmt.Errorf("vault path %q is not a directory", path)
-		}
-	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("inspect vault directory: %w", err)
-	}
-	return path, nil
 }

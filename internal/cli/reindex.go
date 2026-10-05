@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/notes"
 )
 
 func newReindexCommand(newClient ClientFactory) *urfavecli.Command {
@@ -19,7 +19,7 @@ func newReindexCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			result, err := client.Reindex(ctx, app.ReindexCommand{})
+			result, err := client.Reindex(ctx, notes.ReindexCommand{})
 			if err != nil {
 				return err
 			}

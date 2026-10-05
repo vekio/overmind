@@ -9,9 +9,13 @@ import (
 type Period uint8
 
 const (
+	// Unknown is the uninitialized, unsupported period.
 	Unknown Period = iota
+	// Day selects one calendar day.
 	Day
+	// Week selects a calendar week beginning on Monday.
 	Week
+	// Month selects a complete calendar month.
 	Month
 )
 
@@ -25,6 +29,7 @@ func (period Period) IsValid() bool {
 	}
 }
 
+// String returns day, week or month; unsupported values return unknown.
 func (period Period) String() string {
 	switch period {
 	case Day:

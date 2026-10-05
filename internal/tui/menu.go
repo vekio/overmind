@@ -13,6 +13,7 @@ const (
 	actionReindex
 )
 
+// String returns the display label for a menu item.
 func (a action) String() string {
 	for _, item := range menuItems {
 		if item.action == a {
@@ -34,6 +35,6 @@ var menuItems = []menuItem{
 	{actionPerson, "Person", "Create a person note"},
 	{actionBookmark, "Bookmark", "Save a web address"},
 	{actionPage, "Page", "Create a titled note"},
-	{actionJournal, "Journal", "Create a daily entry"},
+	{actionJournal, "Journal", "Open today's journal"},
 	{actionReindex, "Reindex", "Rebuild the index from note files"},
 }

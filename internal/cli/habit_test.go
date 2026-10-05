@@ -14,7 +14,7 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/vekio/overmind/internal/app"
+	apphabit "github.com/vekio/overmind/internal/app/habit"
 	"github.com/vekio/overmind/internal/bootstrap"
 	appconfig "github.com/vekio/overmind/internal/config"
 	"github.com/vekio/overmind/internal/domain/calendar"
@@ -25,37 +25,37 @@ import (
 
 type habitClient struct {
 	Client
-	input app.CreateHabitCommand
+	input apphabit.CreateCommand
 	calls int
 	err   error
 }
 
-func (client *habitClient) CreateHabit(_ context.Context, input app.CreateHabitCommand) (app.CreateHabitResult, error) {
+func (client *habitClient) CreateHabit(_ context.Context, input apphabit.CreateCommand) (apphabit.CreateResult, error) {
 	client.calls++
 	client.input = input
 	if client.err != nil {
-		return app.CreateHabitResult{}, client.err
+		return apphabit.CreateResult{}, client.err
 	}
 	title, err := shared.NewTitle(input.Title)
 	if err != nil {
-		return app.CreateHabitResult{}, err
+		return apphabit.CreateResult{}, err
 	}
 	unit, err := habits.NewUnit(input.Unit)
 	if err != nil {
-		return app.CreateHabitResult{}, err
+		return apphabit.CreateResult{}, err
 	}
 	goal, err := habits.NewGoal(input.Amount, unit, calendar.Day)
 	if err != nil {
-		return app.CreateHabitResult{}, err
+		return apphabit.CreateResult{}, err
 	}
 	habit, err := habits.NewHabit(uuid.MustParse("11111111-1111-4111-8111-111111111111"), title, goal, shared.Tags{}, fixtureMetadata())
-	return app.CreateHabitResult{Habit: habit}, err
+	return apphabit.CreateResult{Habit: habit}, err
 }
 
 func TestHabitCommandPassesFlagsAndTitleToUseCase(t *testing.T) {
 	client := &habitClient{}
 	output := runCLICommand(t, newHabitCommand(fixedClient(client)), []string{"habit", "--amount", "0.5", "--unit", "litros", "--period", "day", "--tag", "Salud", "--tag", "Bienestar", "Beber agua"}, "")
-	expected := app.CreateHabitCommand{Title: "Beber agua", Amount: 0.5, Unit: "litros", Period: "day", Tags: []string{"Salud", "Bienestar"}}
+	expected := apphabit.CreateCommand{Title: "Beber agua", Amount: 0.5, Unit: "litros", Period: "day", Tags: []string{"Salud", "Bienestar"}}
 	if client.calls != 1 || !reflect.DeepEqual(client.input, expected) {
 		t.Fatalf("use case input = %+v", client.input)
 	}

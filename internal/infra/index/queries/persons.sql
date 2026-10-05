@@ -17,3 +17,6 @@ FROM notes n JOIN persons p ON p.note_id = n.id WHERE n.id = ? AND n.type = 'per
 
 -- name: GroupsByPersonID :many
 SELECT group_name FROM person_groups WHERE person_id = ? ORDER BY position;
+
+-- name: FindGroups :many
+SELECT DISTINCT group_name FROM person_groups ORDER BY group_name;

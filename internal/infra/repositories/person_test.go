@@ -12,6 +12,7 @@ import (
 	"uuid"
 
 	"github.com/vekio/overmind/internal/app"
+	appperson "github.com/vekio/overmind/internal/app/person"
 	"github.com/vekio/overmind/internal/domain/bookmarks"
 	"github.com/vekio/overmind/internal/domain/calendar"
 	"github.com/vekio/overmind/internal/domain/habits"
@@ -40,7 +41,7 @@ func TestPersonRepositoryRoundTripAndIndex(t *testing.T) {
 	store := notestore.New(filepath.Join(root, "notes"))
 	repo := repository.NewPersonRepository(store, index, codecs.PersonCodec{})
 	application := app.New(app.Dependencies{Persons: repo, IDGenerator: idgenerator.New()})
-	result, err := application.Commands.CreatePerson.Handle(ctx, app.CreatePersonCommand{Name: "Ana García", Groups: []string{"Trabajo", "Universidad"}, Tags: []string{"Amiga", "Contacto"}})
+	result, err := application.Commands.CreatePerson.Handle(ctx, appperson.CreateCommand{Name: "Ana García", Content: "== Contact\n\n== Context\n\n== Notes\n", Groups: []string{"Trabajo", "Universidad"}, Tags: []string{"Amiga", "Contacto"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +50,7 @@ func TestPersonRepositoryRoundTripAndIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loaded.Name() != person.Name() || loaded.Metadata() != person.Metadata() || !reflect.DeepEqual(loaded.Groups().Strings(), person.Groups().Strings()) || !reflect.DeepEqual(loaded.Tags().Strings(), person.Tags().Strings()) {
+	if loaded.Content() != person.Content() || loaded.Name() != person.Name() || loaded.Metadata() != person.Metadata() || !reflect.DeepEqual(loaded.Groups().Strings(), person.Groups().Strings()) || !reflect.DeepEqual(loaded.Tags().Strings(), person.Tags().Strings()) {
 		t.Fatal("person did not survive codec mapping")
 	}
 	note, err := store.Get(ctx, person.ID())
@@ -96,6 +97,7 @@ func TestPersonRepositoryRoundTripAndIndex(t *testing.T) {
 }
 
 type failingIndex struct {
+	ports.Index
 	err    error
 	calls  int
 	person *persons.Person
@@ -115,7 +117,7 @@ func TestIndexFailureKeepsSavedDocument(t *testing.T) {
 	index := &failingIndex{err: failure}
 	repo := repository.NewPersonRepository(store, index, codecs.PersonCodec{})
 	application := app.New(app.Dependencies{Persons: repo, IDGenerator: idgenerator.New()})
-	result, err := application.Commands.CreatePerson.Handle(ctx, app.CreatePersonCommand{Name: "Ana"})
+	result, err := application.Commands.CreatePerson.Handle(ctx, appperson.CreateCommand{Name: "Ana"})
 	if !errors.Is(err, failure) || result.Person != nil || index.calls != 1 {
 		t.Fatalf("index failure = %v", err)
 	}

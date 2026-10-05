@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/bookmark"
 )
 
 func newBookmarkCommand(newClient ClientFactory) *urfavecli.Command {
@@ -13,16 +13,9 @@ func newBookmarkCommand(newClient ClientFactory) *urfavecli.Command {
 		Name:      "bookmark",
 		Usage:     "save a link for later",
 		ArgsUsage: "URL",
-		Arguments: []urfavecli.Argument{
-			&urfavecli.StringArgs{
-				Name:      "url",
-				UsageText: "URL",
-				Min:       1,
-				Max:       1,
-			},
-		},
+		Arguments: urlArgument(),
 		Flags: []urfavecli.Flag{
-			tagFlag("add `TAG`; repeatable"),
+			tagFlag(),
 		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			urlArguments := command.StringArgs("url")
@@ -34,7 +27,7 @@ func newBookmarkCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			result, err := client.CreateBookmark(ctx, app.CreateBookmarkCommand{URL: urlArguments[0], Tags: command.StringSlice("tag")})
+			result, err := client.CreateBookmark(ctx, bookmark.CreateCommand{URL: urlArguments[0], Tags: command.StringSlice("tag")})
 			if err != nil {
 				return err
 			}

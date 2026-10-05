@@ -16,9 +16,11 @@ type Habit struct {
 	title    shared.Title
 	goal     Goal
 	tags     shared.Tags
+	content  string
 	metadata shared.EntityMetadata
 }
 
+// NewHabit validates identity and required domain values without assigning timestamps.
 func NewHabit(id uuid.UUID, title shared.Title, goal Goal, tags shared.Tags, metadata shared.EntityMetadata) (*Habit, error) {
 	habit := &Habit{id: id, title: title, goal: goal, tags: tags, metadata: metadata}
 	if err := habit.validate(); err != nil {
@@ -43,12 +45,20 @@ func (habit *Habit) validate() error {
 	return habit.goal.validate()
 }
 
+// Metadata returns immutable creation and update timestamps.
 func (habit *Habit) Metadata() shared.EntityMetadata { return habit.metadata }
 
-func (habit *Habit) ID() uuid.UUID       { return habit.id }
+// ID returns the stable document identity.
+func (habit *Habit) ID() uuid.UUID { return habit.id }
+
+// Title returns the validated activity name.
 func (habit *Habit) Title() shared.Title { return habit.title }
-func (habit *Habit) Goal() Goal          { return habit.goal }
-func (habit *Habit) Tags() shared.Tags   { return habit.tags }
+
+// Goal returns the immutable target and its calendar period.
+func (habit *Habit) Goal() Goal { return habit.goal }
+
+// Tags returns the immutable ordered tag collection.
+func (habit *Habit) Tags() shared.Tags { return habit.tags }
 
 // Rename updates the title while preserving identity and goal.
 func (habit *Habit) Rename(title shared.Title, at time.Time) error {
@@ -90,6 +100,24 @@ func (habit *Habit) Register(id uuid.UUID, value float64, at time.Time) (*HabitR
 	return newHabitRecord(id, habit.id, value, at)
 }
 
+// Summary formats the activity name, target amount, unit and period.
 func (habit *Habit) Summary() string {
 	return fmt.Sprintf("%s: %g %s/%s", habit.title, habit.goal.Amount(), habit.goal.Unit(), habit.goal.Period())
+}
+
+// Content returns the original AsciiDoc body.
+func (habit *Habit) Content() string { return habit.content }
+
+// Rewrite replaces the body verbatim, including empty content.
+// Invalid update times leave content and metadata unchanged.
+func (habit *Habit) Rewrite(content string, at time.Time) error {
+	if err := habit.validate(); err != nil {
+		return err
+	}
+	metadata, err := habit.metadata.Updated(at)
+	if err != nil {
+		return err
+	}
+	habit.content, habit.metadata = content, metadata
+	return nil
 }

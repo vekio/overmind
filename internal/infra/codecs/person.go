@@ -10,6 +10,7 @@ import (
 	"github.com/vekio/overmind/internal/ports"
 )
 
+// Encode renders managed attributes and the entity body; unrelated source formatting is not retained.
 func (PersonCodec) Encode(person *persons.Person) ([]byte, error) {
 	if person == nil || person.ID() == uuid.Nil() {
 		return nil, fmt.Errorf("initialized person is required")
@@ -17,6 +18,8 @@ func (PersonCodec) Encode(person *persons.Person) ([]byte, error) {
 	return render("person", person)
 }
 
+// Decode validates the person header and domain values while keeping the body verbatim.
+// It does not validate the body's AsciiDoc syntax.
 func (PersonCodec) Decode(source []byte) (*persons.Person, error) {
 	note, err := decodeHeader(source, ports.NoteKindPerson.String())
 	if err != nil {
@@ -44,9 +47,17 @@ func (PersonCodec) Decode(source []byte) (*persons.Person, error) {
 	if err != nil {
 		return nil, err
 	}
-	return persons.NewPerson(note.id, title, groups, note.tags, note.metadata)
+	entity, err := persons.NewPerson(note.id, title, groups, note.tags, note.metadata)
+	if err != nil {
+		return nil, err
+	}
+	if err := entity.Rewrite(note.body, note.metadata.UpdatedAt()); err != nil {
+		return nil, err
+	}
+	return entity, nil
 }
 
+// PersonCodec encodes managed headers and decodes validated person entities.
 type PersonCodec struct{}
 
 var _ ports.PersonCodec = PersonCodec{}

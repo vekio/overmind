@@ -12,17 +12,25 @@ import (
 
 var _ ports.PersonRepository = (*PersonRepository)(nil)
 
+// PersonRepository stores managed person documents and their derived index entries.
 type PersonRepository struct {
 	notes ports.NoteStore
 	index ports.Index
 	codec ports.PersonCodec
 }
 
+// NewPersonRepository binds source storage, index and typed document codec.
 func NewPersonRepository(notes ports.NoteStore, index ports.Index, codec ports.PersonCodec) *PersonRepository {
 	return &PersonRepository{notes: notes, index: index, codec: codec}
 }
 
+// Save writes the person document before updating its index projection.
+// An indexing error can occur after the document has been saved.
 func (repository *PersonRepository) Save(ctx context.Context, person *persons.Person) error {
+	return repository.persist(ctx, person)
+}
+
+func (repository *PersonRepository) persist(ctx context.Context, person *persons.Person) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -43,6 +51,7 @@ func (repository *PersonRepository) Save(ctx context.Context, person *persons.Pe
 	return nil
 }
 
+// ByID decodes the authoritative source and verifies its person kind and UUID.
 func (repository *PersonRepository) ByID(ctx context.Context, id uuid.UUID) (*persons.Person, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -67,8 +76,24 @@ func (repository *PersonRepository) ByID(ctx context.Context, id uuid.UUID) (*pe
 	if err != nil {
 		return nil, fmt.Errorf("map person note: %w", err)
 	}
-	if person.ID() != id {
+	if person == nil || person.ID() != id {
 		return nil, fmt.Errorf("person note ID does not match requested ID")
 	}
 	return person, nil
+}
+
+// Update requires an existing person and preserves its creation time.
+// It re-encodes the document before refreshing the projection.
+func (repository *PersonRepository) Update(ctx context.Context, entity *persons.Person) error {
+	if entity == nil || repository.index == nil {
+		return fmt.Errorf("person and repository dependencies are required")
+	}
+	existing, err := repository.ByID(ctx, entity.ID())
+	if err != nil {
+		return err
+	}
+	if !existing.Metadata().CreatedAt().Equal(entity.Metadata().CreatedAt()) {
+		return fmt.Errorf("person creation time cannot change")
+	}
+	return repository.persist(ctx, entity)
 }

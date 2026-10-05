@@ -14,7 +14,7 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/vekio/overmind/internal/app"
+	appperson "github.com/vekio/overmind/internal/app/person"
 	"github.com/vekio/overmind/internal/bootstrap"
 	appconfig "github.com/vekio/overmind/internal/config"
 	"github.com/vekio/overmind/internal/domain/persons"
@@ -24,27 +24,27 @@ import (
 
 type personClient struct {
 	Client
-	input app.CreatePersonCommand
+	input appperson.CreateCommand
 	calls int
 	err   error
 }
 
-func (client *personClient) CreatePerson(_ context.Context, command app.CreatePersonCommand) (app.CreatePersonResult, error) {
+func (client *personClient) CreatePerson(_ context.Context, command appperson.CreateCommand) (appperson.CreateResult, error) {
 	client.input = command
 	client.calls++
 	if client.err != nil {
-		return app.CreatePersonResult{}, client.err
+		return appperson.CreateResult{}, client.err
 	}
 	name, _ := shared.NewTitle(command.Name)
 	now := time.Now()
 	metadata, _ := shared.NewEntityMetadata(now, now)
 	person, err := persons.NewPerson(uuid.MustParse("11111111-1111-4111-8111-111111111111"), name, persons.Groups{}, shared.Tags{}, metadata)
-	return app.CreatePersonResult{Person: person}, err
+	return appperson.CreateResult{Person: person}, err
 }
 func TestPersonCommandPassesRawInput(t *testing.T) {
 	client := &personClient{}
 	got := runCLICommand(t, newPersonCommand(fixedClient(client)), []string{"person", "--group", "Work", "--group", "University", "--tag", "One", "--tag", "Two", "Ana García"}, "")
-	expected := app.CreatePersonCommand{Name: "Ana García", Groups: []string{"Work", "University"}, Tags: []string{"One", "Two"}}
+	expected := appperson.CreateCommand{Name: "Ana García", Groups: []string{"Work", "University"}, Tags: []string{"One", "Two"}}
 	if client.calls != 1 || !reflect.DeepEqual(client.input, expected) || got != "Ana García\nID: 11111111-1111-4111-8111-111111111111\n" {
 		t.Fatalf("person input=%+v output=%q", client.input, got)
 	}
@@ -107,6 +107,14 @@ func TestRootPersonCommandUsesCurrentPersistence(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join(vault, "notes", id.String()+".adoc"))
 	if err != nil || !bytes.Contains(source, []byte(":overmind-groups: work, university")) {
 		t.Fatalf("stored person = %s, %v", source, err)
+	}
+	client, err := factory(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	listed, err := client.ListGroups(context.Background(), appperson.ListGroupsQuery{})
+	if err != nil || !reflect.DeepEqual(listed.Groups, []string{"university", "work"}) {
+		t.Fatalf("listed groups=%v, error=%v", listed.Groups, err)
 	}
 	db, err := sql.Open("sqlite", filepath.Join(vault, "index.db"))
 	if err != nil {

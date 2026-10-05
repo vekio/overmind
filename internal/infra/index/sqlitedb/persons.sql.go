@@ -27,6 +27,33 @@ func (q *Queries) EnsureGroup(ctx context.Context, name string) error {
 	return err
 }
 
+const findGroups = `-- name: FindGroups :many
+SELECT DISTINCT group_name FROM person_groups ORDER BY group_name
+`
+
+func (q *Queries) FindGroups(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, findGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var group_name string
+		if err := rows.Scan(&group_name); err != nil {
+			return nil, err
+		}
+		items = append(items, group_name)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const groupsByPersonID = `-- name: GroupsByPersonID :many
 SELECT group_name FROM person_groups WHERE person_id = ? ORDER BY position
 `

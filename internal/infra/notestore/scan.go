@@ -13,8 +13,6 @@ import (
 	"github.com/vekio/overmind/internal/ports"
 )
 
-var _ ports.NoteScanner = (*Store)(nil)
-
 // Scan reads managed .adoc files recursively, in filename order. Filenames
 // carry their UUID, as in Put and Get; other file extensions are ignored.
 func (store *Store) Scan(ctx context.Context, visit func(ports.Note) error) error {

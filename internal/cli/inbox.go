@@ -8,23 +8,16 @@ import (
 	"strings"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/inbox"
 )
 
 func newInboxCommand(newClient ClientFactory) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name:      "inbox",
-		Flags:     []urfavecli.Flag{tagFlag("add `TAG`; repeatable and optional")},
+		Flags:     []urfavecli.Flag{tagFlag()},
 		Usage:     "create a quick inbox note from text or standard input",
 		ArgsUsage: "[TEXT]",
-		Arguments: []urfavecli.Argument{
-			&urfavecli.StringArgs{
-				Name:      "text",
-				UsageText: "[TEXT]",
-				Min:       0,
-				Max:       1,
-			},
-		},
+		Arguments: inboxTextArgument(),
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			textArguments := command.StringArgs("text")
 			if command.NArg() != 0 {
@@ -39,7 +32,7 @@ func newInboxCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			result, err := client.CreateInbox(ctx, app.CreateInboxCommand{Content: text, Tags: command.StringSlice("tag")})
+			result, err := client.CreateInbox(ctx, inbox.CreateCommand{Content: text, Tags: command.StringSlice("tag")})
 			if err != nil {
 				return err
 			}

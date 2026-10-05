@@ -8,8 +8,6 @@ import (
 	"github.com/vekio/overmind/internal/ports"
 )
 
-var _ ports.IndexRebuilder = (*Index)(nil)
-
 // writeTransaction lets ordinary upserts own a transaction, while rebuild
 // upserts borrow the single outer transaction and cannot commit it early.
 type writeTransaction struct {
@@ -17,12 +15,15 @@ type writeTransaction struct {
 	owned bool
 }
 
+// Commit finishes an owned transaction; borrowed rebuild transactions remain open.
 func (transaction *writeTransaction) Commit() error {
 	if !transaction.owned {
 		return nil
 	}
 	return transaction.Tx.Commit()
 }
+
+// Rollback discards an owned transaction; borrowed rebuild transactions remain open.
 func (transaction *writeTransaction) Rollback() error {
 	if !transaction.owned {
 		return nil
@@ -40,6 +41,8 @@ func (index *Index) beginWrite(ctx context.Context) (*writeTransaction, error) {
 	return &writeTransaction{Tx: transaction, owned: true}, nil
 }
 
+// Rebuild replaces all projections within one transaction and rolls back on callback failure.
+// The callback must use the supplied scoped index rather than the outer connection pool.
 func (index *Index) Rebuild(ctx context.Context, populate func(ports.Index) error) error {
 	if populate == nil {
 		return fmt.Errorf("index population callback is required")

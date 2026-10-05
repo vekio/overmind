@@ -150,8 +150,8 @@ func TestDuplicateJournalDateRollsBackSecondNote(t *testing.T) {
 	}
 	defer index.Close()
 	date, _ := calendar.NewDate("2024-02-29")
-	first, _ := journals.NewJournal(uuid.New(), date, shared.Tags{}, fixtureMetadata())
-	second, _ := journals.NewJournal(uuid.New(), date, shared.Tags{}, fixtureMetadata())
+	first, _ := journals.NewJournal(uuid.New(), date, "", shared.Tags{}, fixtureMetadata())
+	second, _ := journals.NewJournal(uuid.New(), date, "", shared.Tags{}, fixtureMetadata())
 	if err := index.UpsertJournal(ctx, first, "first.adoc"); err != nil {
 		t.Fatal(err)
 	}

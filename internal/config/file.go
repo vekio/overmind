@@ -11,7 +11,8 @@ const (
 	fileName        = "config.yml"
 )
 
-// NewFile creates the application configuration file with its defaults.
+// NewFile configures a YAML file handle with application defaults.
+// It does not write the file; setup explicitly creates it after valid submission.
 func NewFile() (*configlib.ConfigFile[Settings], error) {
 	defaultSettings, err := defaults()
 	if err != nil {

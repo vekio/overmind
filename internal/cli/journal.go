@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/journal"
 )
 
 func newJournalCommand(newClient ClientFactory) *urfavecli.Command {
@@ -13,8 +13,8 @@ func newJournalCommand(newClient ClientFactory) *urfavecli.Command {
 		Name:  "journal",
 		Usage: "create a journal note",
 		Flags: []urfavecli.Flag{
-			tagFlag("add `TAG`; repeatable"),
-			&urfavecli.StringFlag{Name: "date", Usage: "calendar date YYYY-MM-DD; defaults to today"},
+			tagFlag(),
+			dateFlag(),
 		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			if command.NArg() != 0 {
@@ -25,7 +25,7 @@ func newJournalCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			result, err := client.CreateJournal(ctx, app.CreateJournalCommand{Date: command.String("date"), Tags: command.StringSlice("tag")})
+			result, err := client.CreateJournal(ctx, journal.CreateCommand{Date: command.String("date"), Tags: command.StringSlice("tag")})
 			if err != nil {
 				return err
 			}

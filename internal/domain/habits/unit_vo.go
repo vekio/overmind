@@ -10,6 +10,7 @@ type Unit struct {
 	value string
 }
 
+// NewUnit trims surrounding whitespace and requires a nonempty single-line label.
 func NewUnit(value string) (Unit, error) {
 	value = strings.TrimSpace(value)
 	if value == "" || strings.ContainsAny(value, "\r\n") {
@@ -18,6 +19,8 @@ func NewUnit(value string) (Unit, error) {
 	return Unit{value: value}, nil
 }
 
+// String returns the literal unit label.
 func (unit Unit) String() string { return unit.value }
 
+// IsZero reports whether the unit is uninitialized.
 func (unit Unit) IsZero() bool { return unit.value == "" }

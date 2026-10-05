@@ -27,14 +27,13 @@ func TestNotesViewKeepsControlsAboveNotification(t *testing.T) {
 func TestMenuViewShowsSelectionControlsAndNotification(t *testing.T) {
 	m := newModel()
 	m.selected = 2
-	next, _ := m.begin(actionHabit)
-	m = next.(model)
+	m.notify("Habit created", notificationSuccess)
 	content := m.View().Content
 	if !strings.Contains(content, "> Habit") || !strings.Contains(content, "move") || !strings.Contains(content, "select") || !strings.Contains(content, "quit") {
 		t.Fatalf("selector or footer missing: %q", content)
 	}
 	controls := strings.LastIndex(content, "quit")
-	notification := strings.LastIndex(content, "Demo: Habit selected")
+	notification := strings.LastIndex(content, "Habit created")
 	if notification < controls || !strings.Contains(content[controls:notification], "\n") {
 		t.Fatal("notification must appear below the controls")
 	}

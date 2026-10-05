@@ -20,6 +20,7 @@ var (
 	controlSeparatorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
 )
 
+// View renders the active screen and its contextual controls in the alternate screen.
 func (m model) View() tea.View {
 	var content string
 	var controls []controlHint
@@ -42,6 +43,18 @@ func (m model) View() tea.View {
 	case screenAsk:
 		content = m.ask.View()
 		controls = append(m.ask.Controls(), controlHint{"esc/q", "back"})
+	case screenForm:
+		content = m.form.View()
+		controls = m.form.Controls()
+	case screenRawEdit:
+		content = "Overmind / Raw edit\n\n" + m.rawStatus()
+		controls = m.rawControls()
+	case screenEdit:
+		content = "Overmind / Edit " + m.action.String() + "\n\nLoading…"
+		controls = []controlHint{{"esc", "back"}}
+	case screenJournal:
+		content = m.journalView()
+		controls = []controlHint{{"r", "refresh"}, {"esc/q", "back"}}
 	case screenNotes:
 		notes := m.notes
 		if m.problem != "" {
@@ -58,7 +71,7 @@ func (m model) View() tea.View {
 		if m.noteCount == 0 && !m.loading && m.problem == "" {
 			content += "\n\nNo notes found."
 		}
-		controls = []controlHint{{"↑/↓", "move"}, {"enter/e", "edit"}, {"d", "delete"}, {"f", "filter"}, {"r", "refresh"}, {"n/p", "page"}, {"esc/q", "back"}}
+		controls = []controlHint{{"↑/↓", "move"}, {"enter/e", "edit"}, {"ctrl+e", "raw edit"}, {"d", "delete"}, {"f", "filter"}, {"r", "refresh"}, {"n/p", "page"}, {"esc/q", "back"}}
 	}
 	if m.problem != "" {
 		content += "\n\nError: " + m.problem
@@ -68,7 +81,11 @@ func (m model) View() tea.View {
 		if m.notification.text != "" {
 			footerHeight--
 		}
-		content = withFooter(content, renderControls(controls, m.width), footerHeight)
+		footer := renderControls(controls, m.width)
+		if m.screen == screenForm || m.screen == screenRawEdit {
+			footer = ansi.Wrap(formatControls(controls), max(1, m.width), "")
+		}
+		content = withFooter(content, footer, footerHeight)
 		if m.notification.text != "" {
 			content += "\n" + m.notification.View(m.width)
 		}
@@ -90,11 +107,16 @@ func (m model) View() tea.View {
 func withFooter(content, footer string, height int) string {
 	content = strings.TrimRight(content, "\n")
 	lines := 1 + strings.Count(content, "\n")
-	gap := max(2, height-lines-1)
+	footerLines := 1 + strings.Count(footer, "\n")
+	gap := max(2, height-lines-footerLines)
 	return content + strings.Repeat("\n", gap) + footer
 }
 
 func renderControls(controls []controlHint, width int) string {
+	return ansi.Truncate(formatControls(controls), max(0, width), "…")
+}
+
+func formatControls(controls []controlHint) string {
 	items := make([]string, 0, len(controls))
 	for _, control := range controls {
 		items = append(items,
@@ -102,5 +124,5 @@ func renderControls(controls []controlHint, width int) string {
 				controlDescriptionStyle.Render(strings.ToLower(control.description)),
 		)
 	}
-	return ansi.Truncate(strings.Join(items, controlSeparatorStyle.Render("  ·  ")), max(0, width), "…")
+	return strings.Join(items, controlSeparatorStyle.Render("  ·  "))
 }

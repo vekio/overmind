@@ -9,6 +9,7 @@ type Window struct {
 	end   Date
 }
 
+// NewWindow requires initialized dates with start strictly before end.
 func NewWindow(start, end Date) (Window, error) {
 	if start.IsZero() || end.IsZero() || !start.Before(end) {
 		return Window{}, fmt.Errorf("window requires initialized dates with start before end")
@@ -16,8 +17,11 @@ func NewWindow(start, end Date) (Window, error) {
 	return Window{start: start, end: end}, nil
 }
 
+// Start returns the inclusive interval boundary.
 func (window Window) Start() Date { return window.start }
-func (window Window) End() Date   { return window.end }
+
+// End returns the exclusive interval boundary.
+func (window Window) End() Date { return window.end }
 
 // Contains reports whether a date is within the interval. An uninitialized
 // window or date never contains or belongs to a calendar interval.

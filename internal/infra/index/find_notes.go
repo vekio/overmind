@@ -12,8 +12,8 @@ import (
 	"github.com/vekio/overmind/internal/ports"
 )
 
-var _ ports.NoteFinder = (*Index)(nil)
-
+// FindNotes returns filtered summaries ordered by update time descending, then UUID ascending.
+// Labels are reduced to a single line for terminal display.
 func (index *Index) FindNotes(ctx context.Context, filter ports.NoteFilter) ([]ports.NoteSummary, error) {
 	rows, err := index.queries.FindNotes(ctx, sqlitedb.FindNotesParams{
 		NoteType: filter.Type, Tag: filter.Tag, PageLimit: int64(filter.Limit), PageOffset: int64(filter.Offset),

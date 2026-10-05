@@ -7,15 +7,15 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/notes"
 	"github.com/vekio/overmind/internal/ports"
 )
 
 func TestFilterModalSearchesAsYouTypeAndPreservesFiltersOnClose(t *testing.T) {
-	var received app.ListNotesQuery
-	m := newApplicationModel(context.Background(), func(_ context.Context, query app.ListNotesQuery) (app.ListNotesResult, error) {
+	var received notes.ListQuery
+	m := newApplicationModel(context.Background(), func(_ context.Context, query notes.ListQuery) (notes.ListResult, error) {
 		received = query
-		return app.ListNotesResult{Notes: []ports.NoteSummary{{Type: "habit", Label: "Beber agua"}}}, nil
+		return notes.ListResult{Notes: []ports.NoteSummary{{Type: "habit", Label: "Beber agua"}}}, nil
 	})
 	m.screen = screenNotes
 	m.offset = notesPageSize
@@ -32,7 +32,7 @@ func TestFilterModalSearchesAsYouTypeAndPreservesFiltersOnClose(t *testing.T) {
 		t.Fatalf("input did not schedule query: %+v", m)
 	}
 	// Consume the pending query directly, without sleeping for the debounce timer.
-	next, cmd = m.Update(loadNotes{revision: m.revision, query: app.ListNotesQuery{Type: m.filters[0].Value(), Limit: notesPageSize + 1}})
+	next, cmd = m.Update(loadNotes{revision: m.revision, query: notes.ListQuery{Type: m.filters[0].Value(), Limit: notesPageSize + 1}})
 	m = next.(model)
 	next, _ = m.Update(cmd())
 	m = next.(model)
@@ -47,7 +47,7 @@ func TestFilterModalSearchesAsYouTypeAndPreservesFiltersOnClose(t *testing.T) {
 	m.filters[1].SetValue("salu")
 	next, _ = m.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
 	m = next.(model)
-	next, cmd = m.Update(loadNotes{revision: m.revision, query: app.ListNotesQuery{Type: m.filters[0].Value(), Tag: m.filters[1].Value(), Limit: notesPageSize + 1}})
+	next, cmd = m.Update(loadNotes{revision: m.revision, query: notes.ListQuery{Type: m.filters[0].Value(), Tag: m.filters[1].Value(), Limit: notesPageSize + 1}})
 	m = next.(model)
 	next, _ = m.Update(cmd())
 	m = next.(model)
@@ -80,10 +80,10 @@ func TestNoteQueriesIgnoreStaleResponsesAndTimers(t *testing.T) {
 	if cmd != nil {
 		t.Fatal("stale timer started a query")
 	}
-	next, _ = m.Update(notesLoaded{revision: m.revision, result: app.ListNotesResult{Notes: []ports.NoteSummary{{Label: "Latest"}}}})
+	next, _ = m.Update(notesLoaded{revision: m.revision, result: notes.ListResult{Notes: []ports.NoteSummary{{Label: "Latest"}}}})
 	m = next.(model)
 	for _, stale := range []notesLoaded{
-		{revision: first, result: app.ListNotesResult{Notes: []ports.NoteSummary{{Label: "Old"}}}},
+		{revision: first, result: notes.ListResult{Notes: []ports.NoteSummary{{Label: "Old"}}}},
 		{revision: first, err: errors.New("old failure")},
 	} {
 		next, _ = m.Update(stale)
@@ -98,7 +98,7 @@ func TestNotesPaginationAndQueryFailure(t *testing.T) {
 	m := newModel()
 	m.screen = screenNotes
 	m.revision = 1
-	result := app.ListNotesResult{Notes: make([]ports.NoteSummary, notesPageSize+1)}
+	result := notes.ListResult{Notes: make([]ports.NoteSummary, notesPageSize+1)}
 	next, _ := m.Update(notesLoaded{revision: 1, result: result})
 	m = next.(model)
 	if !m.hasMore || m.noteCount != notesPageSize {
@@ -109,7 +109,7 @@ func TestNotesPaginationAndQueryFailure(t *testing.T) {
 	if cmd == nil || m.offset != notesPageSize {
 		t.Fatal("next page not requested")
 	}
-	next, _ = m.Update(notesLoaded{revision: m.revision, result: app.ListNotesResult{}})
+	next, _ = m.Update(notesLoaded{revision: m.revision, result: notes.ListResult{}})
 	m = next.(model)
 	if m.hasMore || m.noteCount != 0 {
 		t.Fatal("empty page not handled")

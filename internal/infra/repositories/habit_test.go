@@ -10,6 +10,7 @@ import (
 	"uuid"
 
 	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/habit"
 	"github.com/vekio/overmind/internal/domain/bookmarks"
 	"github.com/vekio/overmind/internal/domain/calendar"
 	"github.com/vekio/overmind/internal/domain/habits"
@@ -48,7 +49,7 @@ func TestUseCasesPersistAndReloadAsciiDoc(t *testing.T) {
 	application := app.New(app.Dependencies{Habits: repo, IDGenerator: idgenerator.New()})
 	for _, period := range []string{"day", "week", "month"} {
 		t.Run(period, func(t *testing.T) {
-			command := app.CreateHabitCommand{Title: "Beber *agua* {literal}", Amount: 2.12345678912345, Unit: "litros: {literal}", Period: period, Tags: []string{"Bienestar", "Salud"}}
+			command := habit.CreateCommand{Title: "Beber *agua* {literal}", Amount: 2.12345678912345, Unit: "litros: {literal}", Period: period, Tags: []string{"Bienestar", "Salud"}}
 			created, err := application.Commands.CreateHabit.Handle(ctx, command)
 			if err != nil {
 				t.Fatal(err)
@@ -110,7 +111,7 @@ func TestRepositoryPropagatesStorageFailuresAndCancellation(t *testing.T) {
 		t.Fatal("storage failure was reported as missing habit")
 	}
 	application := app.New(app.Dependencies{Habits: repo, IDGenerator: idgenerator.New()})
-	_, err := application.Commands.CreateHabit.Handle(context.Background(), app.CreateHabitCommand{Title: "Agua", Amount: 2, Unit: "litros", Period: "day"})
+	_, err := application.Commands.CreateHabit.Handle(context.Background(), habit.CreateCommand{Title: "Agua", Amount: 2, Unit: "litros", Period: "day"})
 	if !errors.Is(err, failure) {
 		t.Fatalf("write failure = %v", err)
 	}
@@ -132,6 +133,7 @@ func TestRepositoryPropagatesStorageFailuresAndCancellation(t *testing.T) {
 }
 
 type observingIndex struct {
+	ports.Index
 	err    error
 	habits int
 }
@@ -204,3 +206,5 @@ func (*observingIndex) UpsertInbox(context.Context, *inbox.Inbox, string) error 
 func (*observingIndex) UpsertPage(context.Context, *pages.Page, string) error          { return nil }
 func (*observingIndex) UpsertJournal(context.Context, *journals.Journal, string) error { return nil }
 func (*observingIndex) JournalExists(context.Context, calendar.Date) (bool, error)     { return false, nil }
+
+func (s failingStore) Scan(context.Context, func(ports.Note) error) error { return s.err }

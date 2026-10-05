@@ -117,3 +117,31 @@ func TestRuntimeConcurrentQueriesShareOneApplication(t *testing.T) {
 		}
 	}
 }
+
+func TestRuntimeCancellationDoesNotInitializeVault(t *testing.T) {
+	root := t.TempDir()
+	vault := filepath.Join(root, "vault")
+	configFile, err := appconfig.NewFile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := configFile.SetPath(filepath.Join(root, "config.yml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := configFile.Create(appconfig.Settings{Mode: appconfig.ModeLocal, VaultPath: vault}); err != nil {
+		t.Fatal(err)
+	}
+	runtime := New(configFile)
+	t.Cleanup(func() { _ = runtime.Close() })
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := runtime.Application(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled initialization = %v", err)
+	}
+	if _, err := os.Stat(vault); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("canceled initialization created the vault: %v", err)
+	}
+	if _, err := runtime.Application(context.Background()); err != nil {
+		t.Fatalf("canceled caller prevented a subsequent initialization: %v", err)
+	}
+}

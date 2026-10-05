@@ -22,7 +22,7 @@ func TestStartScreenCanQuitWithoutApplicationDependencies(t *testing.T) {
 	}
 }
 
-func TestMenuNavigationAndDummySelection(t *testing.T) {
+func TestMenuNavigationAndCreationSelection(t *testing.T) {
 	m := newModel()
 	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = next.(model)
@@ -38,10 +38,14 @@ func TestMenuNavigationAndDummySelection(t *testing.T) {
 		if item.action == actionList || item.action == actionReindex {
 			continue
 		}
-		next, cmd := m.begin(item.action)
-		m = next.(model)
-		if cmd == nil || m.screen != screenMenu || m.notification.text != "Demo: "+item.title+" selected" {
-			t.Fatalf("dummy action %s did not notify", item.title)
+		next, _ := newModel().begin(item.action)
+		opened := next.(model)
+		expected := screenForm
+		if item.action == actionJournal {
+			expected = screenJournal
+		}
+		if opened.screen != expected {
+			t.Fatalf("creation %s did not open its form", item.title)
 		}
 	}
 }

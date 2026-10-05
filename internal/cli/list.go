@@ -7,17 +7,17 @@ import (
 	"text/tabwriter"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/notes"
 )
 
 func newListCommand(newClient ClientFactory) *urfavecli.Command {
 	return &urfavecli.Command{
 		Name: "list", Usage: "list indexed notes, optionally filtered by type and tag",
 		Flags: []urfavecli.Flag{
-			&urfavecli.StringFlag{Name: "type", Usage: "note `TYPE`: habit, person, bookmark, inbox, page or journal"},
-			&urfavecli.StringFlag{Name: "tag", Usage: "match normalized `TAG`"},
-			&urfavecli.IntFlag{Name: "limit", Value: 100, Usage: "maximum number of notes (1–1000; 0 defaults to 100)"},
-			&urfavecli.IntFlag{Name: "offset", Usage: "skip this many notes"},
+			typeFlag(),
+			tagFilterFlag(),
+			limitFlag(),
+			offsetFlag(),
 		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			if command.NArg() != 0 {
@@ -27,7 +27,7 @@ func newListCommand(newClient ClientFactory) *urfavecli.Command {
 			if err != nil {
 				return err
 			}
-			result, err := client.ListNotes(ctx, app.ListNotesQuery{Type: command.String("type"), Tag: command.String("tag"), Limit: command.Int("limit"), Offset: command.Int("offset")})
+			result, err := client.ListNotes(ctx, notes.ListQuery{Type: command.String("type"), Tag: command.String("tag"), Limit: command.Int("limit"), Offset: command.Int("offset")})
 			if err != nil {
 				return err
 			}

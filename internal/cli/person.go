@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	urfavecli "github.com/urfave/cli/v3"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/person"
 )
 
 func newPersonCommand(newClient ClientFactory) *urfavecli.Command {
@@ -13,17 +13,10 @@ func newPersonCommand(newClient ClientFactory) *urfavecli.Command {
 		Name:      "person",
 		Usage:     "create a person note",
 		ArgsUsage: "NAME",
-		Arguments: []urfavecli.Argument{
-			&urfavecli.StringArgs{
-				Name:      "name",
-				UsageText: "NAME",
-				Min:       1,
-				Max:       1,
-			},
-		},
+		Arguments: nameArgument(),
 		Flags: []urfavecli.Flag{
-			&urfavecli.StringSliceFlag{Name: "group", Usage: "add `GROUP`; repeatable"},
-			tagFlag("add `TAG`; repeatable"),
+			groupFlag(),
+			tagFlag(),
 		},
 		Action: func(ctx context.Context, command *urfavecli.Command) error {
 			nameArguments := command.StringArgs("name")
@@ -31,7 +24,7 @@ func newPersonCommand(newClient ClientFactory) *urfavecli.Command {
 				return fmt.Errorf("unexpected arguments after name: %q", command.Args().Slice())
 			}
 
-			input := app.CreatePersonCommand{Name: nameArguments[0], Groups: command.StringSlice("group"), Tags: command.StringSlice("tag")}
+			input := person.CreateCommand{Name: nameArguments[0], Groups: command.StringSlice("group"), Tags: command.StringSlice("tag")}
 			client, err := newClient(ctx)
 			if err != nil {
 				return err

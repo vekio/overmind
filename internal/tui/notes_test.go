@@ -2,17 +2,17 @@ package tui
 
 import (
 	"context"
-	"github.com/vekio/overmind/internal/app"
-	"github.com/vekio/overmind/internal/ports"
 	"reflect"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/vekio/overmind/internal/app/notes"
+	"github.com/vekio/overmind/internal/ports"
 )
 
 func TestNotesQueryAndDummyActionsPreserveRows(t *testing.T) {
-	m := newApplicationModel(context.Background(), func(context.Context, app.ListNotesQuery) (app.ListNotesResult, error) {
-		return app.ListNotesResult{Notes: []ports.NoteSummary{{Type: "habit", Label: "Beber agua"}, {Type: "page", Label: "Plan"}}}, nil
+	m := newApplicationModel(context.Background(), func(context.Context, notes.ListQuery) (notes.ListResult, error) {
+		return notes.ListResult{Notes: []ports.NoteSummary{{Type: "habit", Label: "Beber agua"}, {Type: "page", Label: "Plan"}}}, nil
 	})
 	next, cmd := m.begin(actionList)
 	m = next.(model)

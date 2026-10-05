@@ -5,15 +5,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/notes"
 )
 
 func TestReindexConfirmationRunsUseCaseAndReportsResult(t *testing.T) {
 	m := newModel()
 	calls := 0
-	m.reindex = func(context.Context, app.ReindexCommand) (app.ReindexResult, error) {
+	m.reindex = func(context.Context, notes.ReindexCommand) (notes.ReindexResult, error) {
 		calls++
-		return app.ReindexResult{Indexed: 6}, nil
+		return notes.ReindexResult{Indexed: 6}, nil
 	}
 	next, _ := m.begin(actionReindex)
 	m = next.(model)
@@ -47,8 +47,8 @@ func TestReindexConfirmationRunsUseCaseAndReportsResult(t *testing.T) {
 
 func TestReindexErrorAppearsAsNotification(t *testing.T) {
 	m := newModel()
-	m.reindex = func(context.Context, app.ReindexCommand) (app.ReindexResult, error) {
-		return app.ReindexResult{}, errors.New("invalid note")
+	m.reindex = func(context.Context, notes.ReindexCommand) (notes.ReindexResult, error) {
+		return notes.ReindexResult{}, errors.New("invalid note")
 	}
 	next, cmd := m.Update(askAnswer{option: reindexOption})
 	m = next.(model)

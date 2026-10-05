@@ -13,8 +13,10 @@ type Settings struct {
 	VaultPath string `yaml:"vault,omitempty"`
 }
 
+// Mode identifies the storage backend selected by configuration.
 type Mode string
 
+// ModeLocal stores documents and the derived SQLite index in the local vault.
 const ModeLocal Mode = "local"
 
 func defaults() (Settings, error) {

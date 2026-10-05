@@ -8,7 +8,7 @@ import (
 	"uuid"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/vekio/overmind/internal/app"
+	"github.com/vekio/overmind/internal/app/notes"
 )
 
 func TestDeleteConfirmationUsesSelectedIdentityAndKeepsFilters(t *testing.T) {
@@ -20,12 +20,12 @@ func TestDeleteConfirmationUsesSelectedIdentityAndKeepsFilters(t *testing.T) {
 	m.filters[1].SetValue("salud")
 	m.setNotes([]noteRow{{id: first, kind: "habit", name: "First"}, {id: selected, kind: "habit", name: "Selected"}})
 	m.notes.SetCursor(1)
-	m.deleteNote = func(_ context.Context, command app.DeleteNoteCommand) (app.DeleteNoteResult, error) {
+	m.deleteNote = func(_ context.Context, command notes.DeleteCommand) (notes.DeleteResult, error) {
 		calls++
 		if command.ID != selected.String() {
 			t.Fatalf("deleted wrong note: %s", command.ID)
 		}
-		return app.DeleteNoteResult{ID: selected}, nil
+		return notes.DeleteResult{ID: selected}, nil
 	}
 	next, _ := m.Update(tea.KeyPressMsg{Code: 'd'})
 	m = next.(model)
@@ -61,8 +61,8 @@ func TestDeleteEscapeAndFailureKeepTable(t *testing.T) {
 	m := newModel()
 	m.screen = screenNotes
 	m.setNotes([]noteRow{{id: id, name: "Keep me"}})
-	m.deleteNote = func(context.Context, app.DeleteNoteCommand) (app.DeleteNoteResult, error) {
-		return app.DeleteNoteResult{}, errors.New("cannot delete")
+	m.deleteNote = func(context.Context, notes.DeleteCommand) (notes.DeleteResult, error) {
+		return notes.DeleteResult{}, errors.New("cannot delete")
 	}
 	next, _ := m.Update(tea.KeyPressMsg{Code: 'd'})
 	m = next.(model)

@@ -42,6 +42,8 @@ func splitDocument(source []byte) (header []byte, body []byte) {
 	return source, nil
 }
 
+// decodeHeader validates managed identity, tags and lifecycle metadata in the header.
+// Body attributes cannot override those values because the body is split before parsing.
 func decodeHeader(source []byte, expected string) (noteHeader, error) {
 	headerSource, body := splitDocument(source)
 	result := asciidoc.Process(headerSource)

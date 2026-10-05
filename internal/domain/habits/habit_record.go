@@ -8,6 +8,7 @@ import (
 	"uuid"
 )
 
+// ErrInvalidHabitRecord identifies invalid occurrence identity, quantity or time.
 var ErrInvalidHabitRecord = errors.New("invalid habit record")
 
 // HabitRecord is an entity representing a nonnegative quantity performed at an
@@ -42,7 +43,14 @@ func (record *HabitRecord) validate() error {
 	return nil
 }
 
-func (record *HabitRecord) ID() uuid.UUID         { return record.id }
-func (record *HabitRecord) HabitID() uuid.UUID    { return record.habitID }
-func (record *HabitRecord) Value() float64        { return record.value }
+// ID returns the occurrence identity.
+func (record *HabitRecord) ID() uuid.UUID { return record.id }
+
+// HabitID returns the identity of the associated habit.
+func (record *HabitRecord) HabitID() uuid.UUID { return record.habitID }
+
+// Value returns the finite nonnegative quantity measured for this occurrence.
+func (record *HabitRecord) Value() float64 { return record.value }
+
+// OccurredAt returns the occurrence instant with its original timezone and no monotonic reading.
 func (record *HabitRecord) OccurredAt() time.Time { return record.occurredAt }

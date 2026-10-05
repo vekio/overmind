@@ -1,4 +1,6 @@
-// Package codecs maps domain entities to AsciiDoc documents.
+// Package codecs maps domain entities to managed AsciiDoc documents.
+// Typed codecs validate headers and domain values, keeping body bytes verbatim.
+// RawNoteCodec additionally checks complete document syntax before raw saves.
 package codecs
 
 import (

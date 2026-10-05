@@ -11,6 +11,7 @@ import (
 	"github.com/vekio/overmind/internal/ports"
 )
 
+// Encode renders managed attributes and the entity body; unrelated source formatting is not retained.
 func (HabitCodec) Encode(habit *habits.Habit) ([]byte, error) {
 	if habit == nil || habit.ID() == uuid.Nil() {
 		return nil, fmt.Errorf("initialized habit is required")
@@ -18,6 +19,8 @@ func (HabitCodec) Encode(habit *habits.Habit) ([]byte, error) {
 	return render("habit", habit)
 }
 
+// Decode validates the habit header and domain values while keeping the body verbatim.
+// It does not validate the body's AsciiDoc syntax.
 func (HabitCodec) Decode(source []byte) (*habits.Habit, error) {
 	note, err := decodeHeader(source, ports.NoteKindHabit.String())
 	if err != nil {
@@ -66,9 +69,17 @@ func (HabitCodec) Decode(source []byte) (*habits.Habit, error) {
 	if err != nil {
 		return nil, err
 	}
-	return habits.NewHabit(note.id, title, goal, note.tags, note.metadata)
+	entity, err := habits.NewHabit(note.id, title, goal, note.tags, note.metadata)
+	if err != nil {
+		return nil, err
+	}
+	if err := entity.Rewrite(note.body, note.metadata.UpdatedAt()); err != nil {
+		return nil, err
+	}
+	return entity, nil
 }
 
+// HabitCodec encodes managed headers and decodes validated habit entities.
 type HabitCodec struct{}
 
 var _ ports.HabitCodec = HabitCodec{}

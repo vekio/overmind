@@ -44,6 +44,7 @@ var (
 				Background(lipgloss.Color("#ED567A"))
 )
 
+// View renders a single-line notification clipped to the available width.
 func (n notification) View(width int) string {
 	if width <= 0 {
 		return ""
