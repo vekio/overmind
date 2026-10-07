@@ -77,17 +77,16 @@ func (m model) View() tea.View {
 		content += "\n\nError: " + m.problem
 	}
 	if len(controls) > 0 {
-		footerHeight := m.height
-		if m.notification.text != "" {
-			footerHeight--
-		}
+		// Keep the notification row reserved so controls do not move when it appears.
+		footerHeight := m.height - 1
 		footer := renderControls(controls, m.width)
 		if m.screen == screenForm || m.screen == screenRawEdit {
 			footer = ansi.Wrap(formatControls(controls), max(1, m.width), "")
 		}
 		content = withFooter(content, footer, footerHeight)
+		content += "\n"
 		if m.notification.text != "" {
-			content += "\n" + m.notification.View(m.width)
+			content += m.notification.View(m.width)
 		}
 	}
 	if m.filterOpen {
@@ -108,7 +107,7 @@ func withFooter(content, footer string, height int) string {
 	content = strings.TrimRight(content, "\n")
 	lines := 1 + strings.Count(content, "\n")
 	footerLines := 1 + strings.Count(footer, "\n")
-	gap := max(2, height-lines-footerLines)
+	gap := max(2, height-lines-footerLines+1)
 	return content + strings.Repeat("\n", gap) + footer
 }
 

@@ -39,6 +39,39 @@ func TestMenuViewShowsSelectionControlsAndNotification(t *testing.T) {
 	}
 }
 
+func TestNotificationKeepsControlsInPlace(t *testing.T) {
+	for _, screen := range []screen{screenMenu, screenNotes} {
+		for _, height := range []int{16, 24, 40} {
+			m := newModel()
+			m.screen = screen
+			m.width, m.height = 100, height
+			m.setNotes([]noteRow{{kind: "inbox", name: "Una idea"}})
+			before := m.View().Content
+			m.notify("Note created", notificationSuccess)
+			during := m.View().Content
+			next, _ := m.Update(dismissNotification{id: m.notification.id})
+			after := next.(model).View().Content
+			controlRow := func(content string) int {
+				for row, line := range strings.Split(content, "\n") {
+					if strings.Contains(line, "move") {
+						return row
+					}
+				}
+				return -1
+			}
+			if row := controlRow(before); row < 0 || controlRow(during) != row || controlRow(after) != row {
+				t.Fatalf("screen %d, height %d: controls moved when notification appeared or disappeared", screen, height)
+			}
+			if controlRow(before) != height-2 || len(strings.Split(before, "\n")) != height {
+				t.Fatalf("screen %d, height %d: expected exactly one notification row below controls", screen, height)
+			}
+			if before != after || strings.Count(before, "\n") != strings.Count(during, "\n") {
+				t.Fatalf("screen %d, height %d: notification changed the layout height or did not restore the view", screen, height)
+			}
+		}
+	}
+}
+
 func TestFilterModalIsCenteredOverNotesAndKeepsFooter(t *testing.T) {
 	m := newModel()
 	m.screen = screenNotes
